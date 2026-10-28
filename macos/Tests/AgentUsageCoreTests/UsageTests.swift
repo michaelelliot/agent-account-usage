@@ -86,6 +86,44 @@ struct UsageTests {
         #expect(UsageClient.errorMessage(Data("upstream down".utf8)) == "upstream down")
     }
 
+    @Test func orderedFollowsSavedOrderThenAppendsUnknown() {
+        let profiles = ["a", "b", "c", "d"].map { Profile(id: $0) }
+        #expect(ordered(profiles, by: []).map(\.id) == ["a", "b", "c", "d"])
+        #expect(ordered(profiles, by: ["c", "a"]).map(\.id) == ["c", "a", "b", "d"])
+        #expect(ordered(profiles, by: ["gone", "d", "c", "b", "a", "d"]).map(\.id) == ["d", "c", "b", "a"])
+    }
+
+    @Test func movingTakesTheTargetsPosition() {
+        let ids = ["a", "b", "c", "d"]
+        #expect(moving("a", to: "c", in: ids) == ["b", "c", "a", "d"])
+        #expect(moving("d", to: "b", in: ids) == ["a", "d", "b", "c"])
+        #expect(moving("b", to: "b", in: ids) == ids)
+        #expect(moving("x", to: "b", in: ids) == ids)
+        #expect(moving("a", to: "x", in: ids) == ids)
+    }
+
+    @Test func dropIndexSnapsPastEachNeighboursMidpoint() {
+        let heights = [60.0, 200, 100]
+        #expect(dropIndex(heights: heights, dragging: 0, offset: 0) == 0)
+        #expect(dropIndex(heights: heights, dragging: 0, offset: 100) == 0)
+        #expect(dropIndex(heights: heights, dragging: 0, offset: 101) == 1)
+        #expect(dropIndex(heights: heights, dragging: 0, offset: 251) == 2)
+        #expect(dropIndex(heights: heights, dragging: 0, offset: 999) == 2)
+        #expect(dropIndex(heights: heights, dragging: 2, offset: -100) == 2)
+        #expect(dropIndex(heights: heights, dragging: 2, offset: -101) == 1)
+        #expect(dropIndex(heights: heights, dragging: 2, offset: -231) == 0)
+        #expect(dropIndex(heights: heights, dragging: 1, offset: -31) == 0)
+        #expect(dropIndex(heights: heights, dragging: 1, offset: 51) == 2)
+    }
+
+    @Test func slotOffsetIsTheHeightOfTheRowsPassed() {
+        let heights = [60.0, 200, 100]
+        #expect(slotOffset(heights: heights, from: 0, to: 2) == 300)
+        #expect(slotOffset(heights: heights, from: 2, to: 0) == -260)
+        #expect(slotOffset(heights: heights, from: 1, to: 2) == 100)
+        #expect(slotOffset(heights: heights, from: 1, to: 1) == 0)
+    }
+
     // Hits the real API with your config: AGENT_USAGE_LIVE_TEST=1 swift test
     @Test(.enabled(if: ProcessInfo.processInfo.environment["AGENT_USAGE_LIVE_TEST"] != nil))
     func liveReportsForConfiguredProfiles() async throws {

@@ -15,6 +15,7 @@ final class UsageModel {
 
     private static let refreshInterval: Duration = .seconds(300)
     private static let staleAfter: TimeInterval = 60
+    private static let orderKey = "profileOrder"
     private static let configTemplate = """
         # agent-usage profiles: one [section] per account.
         # Keys: name (optional label), claude_config_dir or oauth_token.
@@ -42,12 +43,30 @@ final class UsageModel {
         do {
             let profiles = try ConfigFile.load(from: configURL)
             configError = profiles.isEmpty ? "no profiles in \(configURL.path)" : nil
-            reports = await fetchReports(for: profiles)
+            let fetched = await fetchReports(for: profiles)
+            // Read the order after fetching so a drag made during the refresh isn't undone.
+            reports = ordered(fetched, by: savedOrder)
         } catch {
             configError = error.localizedDescription
             reports = []
         }
         lastUpdated = .now
+    }
+
+    /// The display order the user dragged the profiles into. Kept in UserDefaults, not the shared config.
+    private var savedOrder: [String] {
+        UserDefaults.standard.stringArray(forKey: Self.orderKey) ?? []
+    }
+
+    /// Moves a profile into another's position. Returns false if either isn't shown.
+    @discardableResult
+    func move(_ id: String, to target: String) -> Bool {
+        let ids = reports.map(\.id)
+        guard ids.contains(id), ids.contains(target) else { return false }
+        let newOrder = moving(id, to: target, in: ids)
+        reports = ordered(reports, by: newOrder)
+        UserDefaults.standard.set(newOrder, forKey: Self.orderKey)
+        return true
     }
 
     func refreshIfStale() {

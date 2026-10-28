@@ -84,7 +84,7 @@ bun fmt     # format
 
 ## macOS app
 
-A menu bar item showing a gauge and the highest utilization of the `[default]` profile (or `$AGENT_USAGE_PROFILE`, or the first profile). Click it to see every profile's limits, reset times, extra usage and errors. It refreshes every 5 minutes, and when opened if the data is more than a minute old. The gear button opens the config in your default text editor, creating a starter file if there isn't one.
+A menu bar item showing a gauge and the highest utilization of the `[default]` profile (or `$AGENT_USAGE_PROFILE`, or the first profile). Click it to see every profile's limits, reset times, extra usage and errors. Drag a profile up or down to reorder them; the app remembers the order (the CLI keeps config file order). It refreshes every 5 minutes, and when opened if the data is more than a minute old. The gear button opens the config in your default text editor, creating a starter file if there isn't one.
 
 Needs macOS 14 or later and the Swift 6 toolchain that comes with Xcode.
 

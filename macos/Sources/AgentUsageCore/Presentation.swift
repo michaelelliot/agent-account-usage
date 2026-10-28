@@ -74,6 +74,48 @@ extension ExtraUsage {
     }
 }
 
+/// Puts items in `order`. Items it doesn't mention keep their relative order after the rest.
+public func ordered<Item: Identifiable>(_ items: [Item], by order: [Item.ID]) -> [Item] {
+    let rank = Dictionary(order.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+    let known = items.filter { rank[$0.id] != nil }.sorted { rank[$0.id]! < rank[$1.id]! }
+    return known + items.filter { rank[$0.id] == nil }
+}
+
+/// Moves `id` into `target`'s position, shifting the items in between.
+public func moving<ID: Equatable>(_ id: ID, to target: ID, in ids: [ID]) -> [ID] {
+    guard let from = ids.firstIndex(of: id), let to = ids.firstIndex(of: target), from != to else { return ids }
+    var result = ids
+    result.remove(at: from)
+    result.insert(id, at: to)
+    return result
+}
+
+/// Where a dragged row lands: it passes a neighbour once its leading edge crosses that neighbour's midpoint.
+/// `heights` are the rows' heights in their current order and `offset` is how far the row was dragged.
+public func dropIndex(heights: [Double], dragging index: Int, offset: Double) -> Int {
+    var target = index
+    var passed = 0.0
+    if offset > 0 {
+        for next in heights.indices.dropFirst(index + 1) {
+            guard offset > passed + heights[next] / 2 else { break }
+            passed += heights[next]
+            target = next
+        }
+    } else {
+        for previous in heights.indices.prefix(index).reversed() {
+            guard -offset > passed + heights[previous] / 2 else { break }
+            passed += heights[previous]
+            target = previous
+        }
+    }
+    return target
+}
+
+/// How far a row travels going from index `from` to `to` while the rows in between close up.
+public func slotOffset(heights: [Double], from: Int, to: Int) -> Double {
+    from < to ? heights[(from + 1)...to].reduce(0, +) : -heights[to..<from].reduce(0, +)
+}
+
 func money(_ minor: Double, decimals: Int, currency: String) -> String {
     (minor / pow(10, Double(decimals))).formatted(.currency(code: currency).locale(Locale(identifier: "en_US")))
 }
