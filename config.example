@@ -1,0 +1,15 @@
+# agent-usage config: copy to ~/.config/agent-usage/config
+# Each section is a profile. Optional `name` replaces the profile id in printed output.
+# Credentials use one of:
+#   claude_config_dir  a Claude Code config dir; the OAuth token Claude Code stored for it is read (read-only)
+#   oauth_token        a literal Claude OAuth access token (sk-ant-oat01-...); wins if both are set
+
+[default]
+name = "Default"
+claude_config_dir = ~/.claude
+
+[personal]
+claude_config_dir = ~/.claude-personal
+
+[work]
+oauth_token = sk-ant-oat01-...
