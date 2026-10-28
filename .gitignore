@@ -15,6 +15,7 @@ res
 .env
 .venv
 .yarn
+.swiftpm
 
 # Ignored files
 *.DS_Store
