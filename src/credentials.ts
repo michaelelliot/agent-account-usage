@@ -20,20 +20,31 @@ interface StoredCredentials {
 
 // Mirrors how Claude Code names its keychain item for a given CLAUDE_CONFIG_DIR.
 export function keychainServices(configDir: string): string[] {
-  const hash = createHash("sha256").update(configDir.normalize("NFC")).digest("hex").slice(0, 8);
+  const hash = createHash("sha256")
+    .update(configDir.normalize("NFC"))
+    .digest("hex")
+    .slice(0, 8);
   const suffixed = `Claude Code-credentials-${hash}`;
   // With CLAUDE_CONFIG_DIR unset, Claude Code uses ~/.claude and an unsuffixed service name.
-  return configDir === join(homedir(), ".claude") ? ["Claude Code-credentials", suffixed] : [suffixed];
+  return configDir === join(homedir(), ".claude")
+    ? ["Claude Code-credentials", suffixed]
+    : [suffixed];
 }
 
 async function readKeychain(service: string): Promise<string | undefined> {
   if (process.platform !== "darwin") return undefined;
   const account = process.env.USER || userInfo().username;
-  const proc = Bun.spawn(["security", "find-generic-password", "-a", account, "-w", "-s", service], {
-    stdout: "pipe",
-    stderr: "ignore",
-  });
-  const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+  const proc = Bun.spawn(
+    ["security", "find-generic-password", "-a", account, "-w", "-s", service],
+    {
+      stdout: "pipe",
+      stderr: "ignore",
+    },
+  );
+  const [out, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    proc.exited,
+  ]);
   return code === 0 && out.trim() ? out.trim() : undefined;
 }
 
@@ -45,7 +56,8 @@ function parseStored(raw: string, source: string): Credentials {
     throw new Error(`could not parse credentials from ${source}`);
   }
   const oauth = data.claudeAiOauth;
-  if (!oauth?.accessToken) throw new Error(`no Claude.ai OAuth token in ${source}`);
+  if (!oauth?.accessToken)
+    throw new Error(`no Claude.ai OAuth token in ${source}`);
   return {
     token: oauth.accessToken,
     source,
@@ -54,7 +66,9 @@ function parseStored(raw: string, source: string): Credentials {
   };
 }
 
-async function readConfigDir(configDir: string): Promise<Credentials | undefined> {
+async function readConfigDir(
+  configDir: string,
+): Promise<Credentials | undefined> {
   for (const service of keychainServices(configDir)) {
     const raw = await readKeychain(service);
     if (raw) return parseStored(raw, `keychain "${service}"`);
@@ -64,14 +78,20 @@ async function readConfigDir(configDir: string): Promise<Credentials | undefined
   return undefined;
 }
 
-export async function resolveCredentials(section: Section): Promise<Credentials> {
-  if (section.oauth_token) return { token: section.oauth_token, source: "oauth_token" };
-  if (!section.claude_config_dir) throw new Error("section needs oauth_token or claude_config_dir");
+export async function resolveCredentials(
+  section: Section,
+): Promise<Credentials> {
+  if (section.oauth_token)
+    return { token: section.oauth_token, source: "oauth_token" };
+  if (!section.claude_config_dir)
+    throw new Error("section needs oauth_token or claude_config_dir");
 
   const configDir = resolve(expandHome(section.claude_config_dir));
   const creds = await readConfigDir(configDir);
   if (!creds) {
-    throw new Error(`no Claude Code login found for ${configDir} (run: CLAUDE_CONFIG_DIR=${configDir} claude /login)`);
+    throw new Error(
+      `no Claude Code login found for ${configDir} (run: CLAUDE_CONFIG_DIR=${configDir} claude /login)`,
+    );
   }
   if (creds.expiresAt && creds.expiresAt <= Date.now()) {
     throw new Error(

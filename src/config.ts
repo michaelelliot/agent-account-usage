@@ -4,7 +4,12 @@ import { join } from "node:path";
 export type Section = Record<string, string>;
 export type Config = Map<string, Section>;
 
-export const DEFAULT_CONFIG_PATH = join(homedir(), ".config", "agent-usage", "config");
+export const DEFAULT_CONFIG_PATH = join(
+  homedir(),
+  ".config",
+  "agent-usage",
+  "config",
+);
 
 export function parseIni(text: string): Config {
   const config: Config = new Map();
@@ -28,7 +33,10 @@ export function parseIni(text: string): Config {
 }
 
 function unquote(value: string): string {
-  const quoted = value.length >= 2 && (value[0] === '"' || value[0] === "'") && value.at(-1) === value[0];
+  const quoted =
+    value.length >= 2 &&
+    (value[0] === '"' || value[0] === "'") &&
+    value.at(-1) === value[0];
   return quoted ? value.slice(1, -1) : value;
 }
 

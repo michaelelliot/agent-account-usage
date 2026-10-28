@@ -1,17 +1,32 @@
 import { describe, expect, test } from "bun:test";
+import { stripVTControlCharacters } from "node:util";
 import { bar, formatDuration, formatError, formatProfile } from "./format";
 import type { Usage } from "./usage";
 
 const NOW = Date.parse("2026-10-28T15:30:00Z");
+const PLAIN = { now: NOW, color: false };
 const creds = { token: "t", source: "test", subscriptionType: "max" };
 
 describe("formatProfile", () => {
   test("renders limits[] rows with reset times and extra usage", () => {
     const usage: Usage = {
       limits: [
-        { kind: "session", percent: 42, resets_at: "2026-10-28T17:43:00.384567+00:00" },
-        { kind: "weekly_all", percent: 8, resets_at: "2026-10-30T06:00:00.384594+00:00" },
-        { kind: "weekly_scoped", percent: 0, resets_at: null, scope: { model: { display_name: "Fable" } } },
+        {
+          kind: "session",
+          percent: 42,
+          resets_at: "2026-10-28T17:43:00.384567+00:00",
+        },
+        {
+          kind: "weekly_all",
+          percent: 8,
+          resets_at: "2026-10-30T06:00:00.384594+00:00",
+        },
+        {
+          kind: "weekly_scoped",
+          percent: 0,
+          resets_at: null,
+          scope: { model: { display_name: "Fable" } },
+        },
       ],
       extra_usage: {
         is_enabled: false,
@@ -23,7 +38,7 @@ describe("formatProfile", () => {
         disabled_reason: "out_of_credits",
       },
     };
-    expect(formatProfile("personal", creds, usage, NOW)).toBe(
+    expect(formatProfile("personal", creds, usage, PLAIN)).toBe(
       [
         "[personal]  max",
         "  Session (5h)  ████████░░░░░░░░░░░░  42%  resets in 2h 13m",
@@ -41,7 +56,14 @@ describe("formatProfile", () => {
       seven_day_opus: null,
       seven_day_sonnet: { utilization: null, resets_at: null },
     };
-    expect(formatProfile("work", { token: "t", source: "oauth_token" }, usage, NOW)).toBe(
+    expect(
+      formatProfile(
+        "work",
+        { token: "t", source: "oauth_token" },
+        usage,
+        PLAIN,
+      ),
+    ).toBe(
       [
         "[work]",
         "  Session (5h)  ████████████████████ 100%  resets in 15m",
@@ -53,13 +75,49 @@ describe("formatProfile", () => {
   test("hides extra usage when it is off and has no limit", () => {
     const usage: Usage = {
       limits: [{ kind: "weekly_all", percent: 1, resets_at: null }],
-      extra_usage: { is_enabled: false, monthly_limit: null, used_credits: null, utilization: null },
+      extra_usage: {
+        is_enabled: false,
+        monthly_limit: null,
+        used_credits: null,
+        utilization: null,
+      },
     };
-    expect(formatProfile("p", creds, usage, NOW)).not.toContain("Extra usage");
+    expect(formatProfile("p", creds, usage, PLAIN)).not.toContain(
+      "Extra usage",
+    );
+  });
+
+  test("colours by utilization level and otherwise matches plain output", () => {
+    const usage: Usage = {
+      limits: [
+        { kind: "session", percent: 20, resets_at: null },
+        { kind: "weekly_all", percent: 75, resets_at: null },
+        {
+          kind: "weekly_scoped",
+          percent: 95,
+          resets_at: "2026-10-28T16:00:00Z",
+          scope: { model: { display_name: "Fable" } },
+        },
+      ],
+    };
+    const lines = formatProfile("p", creds, usage, {
+      now: NOW,
+      color: true,
+    }).split("\n");
+    expect(lines[0]).toBe("\x1b[1m[p]\x1b[22m  \x1b[2mmax\x1b[22m");
+    expect(lines[1]).toContain("\x1b[32m 20%");
+    expect(lines[2]).toContain("\x1b[33m 75%");
+    expect(lines[3]).toContain("\x1b[31m 95%");
+    expect(lines[3]).toContain("\x1b[2m  resets in 30m");
+    expect(stripVTControlCharacters(lines.join("\n"))).toBe(
+      formatProfile("p", creds, usage, PLAIN),
+    );
   });
 
   test("says so when no limits are reported", () => {
-    expect(formatProfile("p", creds, {}, NOW)).toBe("[p]  max\n  no plan usage limits reported");
+    expect(formatProfile("p", creds, {}, PLAIN)).toBe(
+      "[p]  max\n  no plan usage limits reported",
+    );
   });
 });
 
@@ -78,6 +136,11 @@ describe("helpers", () => {
   });
 
   test("formatError", () => {
-    expect(formatError("x", "boom")).toBe("[x]\n  error: boom");
+    expect(formatError("x", "boom", { color: false })).toBe(
+      "[x]\n  error: boom",
+    );
+    expect(formatError("x", "boom", { color: true })).toBe(
+      "\x1b[1m[x]\x1b[22m\n  \x1b[31merror:\x1b[39m boom",
+    );
   });
 });

@@ -58,6 +58,8 @@ agent-usage --json               # raw API responses keyed by profile
 agent-usage list                 # profile names and credential source
 ```
 
+Output is coloured when stdout is a terminal. Set `NO_COLOR=1` to turn colours off, or `FORCE_COLOR=1` to keep them when piping.
+
 The exit code is 1 if any profile failed (missing section, no login, expired token, HTTP error).
 
 Usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the same endpoint Claude Code's `/usage` uses. It is undocumented and may change.
@@ -66,5 +68,6 @@ Usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the same endpo
 
 ```sh
 bun test
-bun run typecheck
+bun check   # type check
+bun fmt     # format
 ```

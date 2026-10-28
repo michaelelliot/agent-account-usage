@@ -12,14 +12,22 @@ interface Options {
   json?: boolean;
 }
 
-type Result = { name: string; label: string } & ({ creds: Credentials; usage: Usage } | { error: string });
+type Result = { name: string; label: string } & (
+  { creds: Credentials; usage: Usage } | { error: string }
+);
 
 const collect = (value: string, previous: string[]) => [...previous, value];
 
 const program = new Command()
   .name("agent-usage")
-  .description("Print Claude.ai plan quota usage for accounts in an INI config file")
-  .option("-c, --config <path>", "config file", process.env.AGENT_USAGE_CONFIG ?? DEFAULT_CONFIG_PATH)
+  .description(
+    "Print Claude.ai plan quota usage for accounts in an INI config file",
+  )
+  .option(
+    "-c, --config <path>",
+    "config file",
+    process.env.AGENT_USAGE_CONFIG ?? DEFAULT_CONFIG_PATH,
+  )
   .addOption(
     new Option("-p, --profile <name>", "profile to show, repeatable")
       .argParser(collect)
@@ -41,20 +49,34 @@ const program = new Command()
         const section = config.get(name);
         const label = section?.name || name;
         try {
-          if (!section) throw new Error(`no [${name}] section in ${configPath}`);
+          if (!section)
+            throw new Error(`no [${name}] section in ${configPath}`);
           const creds = await resolveCredentials(section);
           return { name, label, creds, usage: await fetchUsage(creds.token) };
         } catch (e) {
-          return { name, label, error: e instanceof Error ? e.message : String(e) };
+          return {
+            name,
+            label,
+            error: e instanceof Error ? e.message : String(e),
+          };
         }
       }),
     );
 
     if (opts.json) {
-      const out = Object.fromEntries(results.map((r) => [r.name, "error" in r ? { error: r.error } : r.usage]));
+      const out = Object.fromEntries(
+        results.map((r) => [
+          r.name,
+          "error" in r ? { error: r.error } : r.usage,
+        ]),
+      );
       console.log(JSON.stringify(out, null, 2));
     } else {
-      const blocks = results.map((r) => ("error" in r ? formatError(r.label, r.error) : formatProfile(r.label, r.creds, r.usage)));
+      const blocks = results.map((r) =>
+        "error" in r
+          ? formatError(r.label, r.error)
+          : formatProfile(r.label, r.creds, r.usage),
+      );
       console.log(blocks.join("\n\n"));
     }
     if (results.some((r) => "error" in r)) process.exitCode = 1;
