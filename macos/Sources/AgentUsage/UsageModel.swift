@@ -89,11 +89,8 @@ final class UsageModel {
         }
     }
 
-    /// The profile summarised in the menu bar: $AGENT_USAGE_PROFILE, [default], or the first one.
-    private var primaryReport: ProfileReport? {
-        let preferred = ProcessInfo.processInfo.environment["AGENT_USAGE_PROFILE"].flatMap { $0.isEmpty ? nil : $0 }
-        return reports.first { $0.id == (preferred ?? "default") } ?? reports.first
-    }
+    /// The profile summarised in the menu bar: whichever is at the top of the list.
+    private var primaryReport: ProfileReport? { reports.first }
 
     /// Highest utilization across the primary profile's windows.
     var peakPercent: Double? {
@@ -105,17 +102,32 @@ final class UsageModel {
         peakPercent.map { "\(Int($0.rounded()))%" }
     }
 
-    var symbolName: String {
-        guard let peak = peakPercent else {
-            return configError != nil || primaryReport != nil
+    /// Escalates as the top account nears its limit: the needle climbs, turns orange, then red, then catches fire.
+    /// Uses the rounded percentage so the icon agrees with the number beside it.
+    var menuBarSymbol: (name: String, color: NSColor?) {
+        guard let peak = peakPercent?.rounded() else {
+            let name =
+                configError != nil || primaryReport != nil
                 ? "exclamationmark.triangle" : "gauge.with.dots.needle.bottom.50percent"
+            return (name, nil)
         }
         switch peak {
-        case ..<17: return "gauge.with.dots.needle.0percent"
-        case ..<42: return "gauge.with.dots.needle.33percent"
-        case ..<58: return "gauge.with.dots.needle.50percent"
-        case ..<84: return "gauge.with.dots.needle.67percent"
-        default: return "gauge.with.dots.needle.100percent"
+        case ..<50: return ("gauge.with.dots.needle.33percent", nil)
+        case ..<75: return ("gauge.with.dots.needle.50percent", nil)
+        case ..<90: return ("gauge.with.dots.needle.67percent", .systemOrange)
+        case ..<95: return ("gauge.open.with.lines.needle.84percent.exclamation", .systemRed)
+        default: return ("flame.fill", .systemRed)
         }
+    }
+
+    /// A template image (drawn in the menu bar's own colour) until usage needs attention, then tinted.
+    var menuBarImage: NSImage {
+        let (name, color) = menuBarSymbol
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Claude usage") ?? NSImage()
+        guard let color, let tinted = image.withSymbolConfiguration(.init(paletteColors: [color])) else {
+            return image
+        }
+        tinted.isTemplate = false
+        return tinted
     }
 }

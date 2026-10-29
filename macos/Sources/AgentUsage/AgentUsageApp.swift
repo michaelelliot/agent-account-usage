@@ -14,7 +14,7 @@ struct AgentUsageApp: App {
         MenuBarExtra {
             UsageMenuView(model: model)
         } label: {
-            Image(systemName: model.symbolName)
+            Image(nsImage: model.menuBarImage)
             if let text = model.menuBarText {
                 Text(text)
             }
