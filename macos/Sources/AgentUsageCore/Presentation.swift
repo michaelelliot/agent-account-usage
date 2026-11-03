@@ -25,6 +25,64 @@ public struct ExtraUsageSummary: Sendable, Equatable {
     public let disabledReason: String?
 }
 
+public struct CreditsSummary: Sendable, Equatable {
+    /// "60,511", or "Unlimited".
+    public let balance: String
+    /// The plan limit is reached, so Codex is spending credits.
+    public let isInUse: Bool
+}
+
+public struct ResetsSummary: Sendable, Equatable {
+    public let available: Int
+    /// When the soonest-expiring reset expires, if known.
+    public let nextExpiry: Date?
+}
+
+extension ProfileUsage {
+    init(claude usage: Usage, subscriptionType: String?) {
+        self.init(
+            subscriptionType: subscriptionType, rows: usage.rows, extraUsage: usage.extraUsage?.summary,
+            credits: nil, resets: nil)
+    }
+
+    init(codex usage: CodexUsage, resetCredits: [CodexResetCredit]) {
+        let windows = [usage.rateLimit?.primaryWindow, usage.rateLimit?.secondaryWindow].compactMap { $0 }
+        let available = usage.rateLimitResetCredits?.availableCount ?? 0
+        let expiries = resetCredits.filter { $0.status == "available" }.compactMap { $0.expiresAt.flatMap(parseDate) }
+        self.init(
+            subscriptionType: usage.planType,
+            rows: windows.map {
+                UsageRow(
+                    label: windowLabel(seconds: $0.limitWindowSeconds), percent: $0.usedPercent,
+                    resetsAt: $0.resetAt.map(Date.init(timeIntervalSince1970:)))
+            },
+            extraUsage: nil,
+            credits: usage.credits.flatMap { CreditsSummary($0, limitReached: usage.rateLimit?.limitReached ?? false) },
+            resets: available > 0 ? ResetsSummary(available: available, nextExpiry: expiries.min()) : nil
+        )
+    }
+}
+
+extension CreditsSummary {
+    /// Nil when there are no credits to spend.
+    init?(_ credits: CodexUsage.Credits, limitReached: Bool) {
+        if credits.unlimited == true {
+            self.init(balance: "Unlimited", isInUse: limitReached)
+            return
+        }
+        guard let balance = credits.balance.flatMap(Double.init), balance > 0 else { return nil }
+        let formatted = balance.formatted(.number.precision(.fractionLength(0)).locale(Locale(identifier: "en_US")))
+        self.init(balance: formatted, isInUse: limitReached)
+    }
+}
+
+/// Codex reports windows by length: 5 hours on most plans, plus a week.
+func windowLabel(seconds: Double) -> String {
+    let hours = Int((seconds / 3600).rounded())
+    if hours == 168 { return "Weekly" }
+    return hours < 24 ? "Session (\(hours)h)" : "\(Int((Double(hours) / 24).rounded()))-day"
+}
+
 extension UsageLimit {
     var label: String {
         switch kind {

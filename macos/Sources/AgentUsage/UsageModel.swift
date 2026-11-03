@@ -18,7 +18,7 @@ final class UsageModel {
     private static let orderKey = "profileOrder"
     private static let configTemplate = """
         # agent-usage profiles: one [section] per account.
-        # Keys: name (optional label), claude_config_dir or oauth_token.
+        # Keys: name (optional label), and claude_config_dir, oauth_token or codex_home.
 
         [default]
         claude_config_dir = ~/.claude
@@ -95,7 +95,7 @@ final class UsageModel {
     /// Highest utilization across the primary profile's windows.
     var peakPercent: Double? {
         guard case let .success(profile)? = primaryReport?.result else { return nil }
-        return profile.usage.rows.map(\.percent).max()
+        return profile.rows.map(\.percent).max()
     }
 
     var menuBarText: String? {
@@ -123,7 +123,7 @@ final class UsageModel {
     /// A template image (drawn in the menu bar's own colour) until usage needs attention, then tinted.
     var menuBarImage: NSImage {
         let (name, color) = menuBarSymbol
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Claude usage") ?? NSImage()
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Agent usage") ?? NSImage()
         guard let color, let tinted = image.withSymbolConfiguration(.init(paletteColors: [color])) else {
             return image
         }

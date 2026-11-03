@@ -197,15 +197,26 @@ private struct ProfileSection: View {
             }
             switch report.result {
             case let .success(profile):
-                let rows = profile.usage.rows
+                let rows = profile.rows
                 if rows.isEmpty {
                     Text("No plan usage limits reported").font(.callout).foregroundStyle(.secondary)
                 }
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                     UsageRowView(row: row)
                 }
-                if let extra = profile.usage.extraUsage?.summary {
+                if let extra = profile.extraUsage {
                     ExtraUsageView(summary: extra)
+                }
+                if let credits = profile.credits {
+                    DetailRow(
+                        label: "Credits", value: credits.balance,
+                        caption: credits.isInUse ? "In use until the limit resets" : nil)
+                }
+                if let resets = profile.resets {
+                    DetailRow(
+                        label: "Limit resets", value: "\(resets.available) available",
+                        caption: resets.nextExpiry.map { "Next expires in \(formatDuration($0.timeIntervalSinceNow))" },
+                        help: resets.nextExpiry?.formatted(date: .abbreviated, time: .shortened))
                 }
             case let .failure(error):
                 ErrorText(message: error.message)
@@ -257,6 +268,31 @@ private struct ExtraUsageView: View {
                 Text(summary.disabledReason.map { "Disabled (\($0))" } ?? "Disabled")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+        }
+        .font(.callout)
+    }
+}
+
+/// A label and value with an optional caption below, like the extra usage row.
+private struct DetailRow: View {
+    let label: String
+    let value: String
+    var caption: String?
+    var help: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(label)
+                Spacer()
+                Text(value).monospacedDigit()
+            }
+            if let caption {
+                Text(caption)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .help(help ?? "")
             }
         }
         .font(.callout)

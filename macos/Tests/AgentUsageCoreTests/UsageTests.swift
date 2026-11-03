@@ -131,8 +131,12 @@ struct UsageTests {
         for report in await fetchReports(for: profiles) {
             switch report.result {
             case let .success(profile):
-                let rows = profile.usage.rows.map { "\($0.label) \(Int($0.percent.rounded()))%" }
-                print("[\(report.displayName)] \(profile.subscriptionType ?? "-"): \(rows.joined(separator: ", "))")
+                var parts = profile.rows.map { "\($0.label) \(Int($0.percent.rounded()))%" }
+                if let credits = profile.credits { parts.append("credits \(credits.balance)") }
+                if let resets = profile.resets {
+                    parts.append("resets \(resets.available), next expires \(resets.nextExpiry?.description ?? "?")")
+                }
+                print("[\(report.displayName)] \(profile.subscriptionType ?? "-"): \(parts.joined(separator: ", "))")
             case let .failure(error):
                 print("[\(report.displayName)] error: \(error.message)")
             }

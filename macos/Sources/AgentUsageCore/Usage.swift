@@ -67,19 +67,24 @@ public enum UsageClient {
         }
     }
 
+    /// Anthropic's `{"error": {"message"}}`, ChatGPT's `{"detail"}`, or the start of the body.
     static func errorMessage(_ data: Data) -> String {
         let body = String(decoding: data.prefix(200), as: UTF8.self)
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let error = json["error"] as? [String: Any],
-            let message = error["message"] as? String
-        else { return body }
-        return message
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return body }
+        if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
+            return message
+        }
+        return json["detail"] as? String ?? body
     }
 }
 
+/// One account's usage, from either provider, ready to show.
 public struct ProfileUsage: Sendable {
     public let subscriptionType: String?
-    public let usage: Usage
+    public let rows: [UsageRow]
+    public let extraUsage: ExtraUsageSummary?
+    public let credits: CreditsSummary?
+    public let resets: ResetsSummary?
 }
 
 public struct ProfileReport: Sendable, Identifiable {
@@ -105,9 +110,15 @@ public func fetchReports(for profiles: [Profile]) async -> [ProfileReport] {
 func fetchReport(for profile: Profile) async -> ProfileReport {
     let result: Result<ProfileUsage, UsageError>
     do {
-        let creds = try CredentialStore.resolve(profile)
-        let usage = try await UsageClient.fetch(token: creds.token)
-        result = .success(ProfileUsage(subscriptionType: creds.subscriptionType, usage: usage))
+        if let codexHome = profile.values["codex_home"], !codexHome.isEmpty {
+            let creds = try CodexAuth.resolve(codexHome: codexHome)
+            let (usage, resetCredits) = try await CodexClient.fetch(creds)
+            result = .success(ProfileUsage(codex: usage, resetCredits: resetCredits))
+        } else {
+            let creds = try CredentialStore.resolve(profile)
+            let usage = try await UsageClient.fetch(token: creds.token)
+            result = .success(ProfileUsage(claude: usage, subscriptionType: creds.subscriptionType))
+        }
     } catch let error as UsageError {
         result = .failure(error)
     } catch {

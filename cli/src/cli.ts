@@ -1,9 +1,15 @@
 #!/usr/bin/env bun
 import { Command, Option } from "commander";
-import { DEFAULT_CONFIG_PATH, expandHome, loadConfig } from "./config";
-import { resolveCredentials, type Credentials } from "./credentials";
-import { formatError, formatProfile } from "./format";
-import { fetchUsage, type Usage } from "./usage";
+import { fetchCodexUsage, resolveCodexCredentials } from "./codex";
+import {
+  DEFAULT_CONFIG_PATH,
+  expandHome,
+  loadConfig,
+  type Section,
+} from "./config";
+import { resolveCredentials } from "./credentials";
+import { formatCodexProfile, formatError, formatProfile } from "./format";
+import { fetchUsage } from "./usage";
 
 interface Options {
   config: string;
@@ -12,16 +18,27 @@ interface Options {
   json?: boolean;
 }
 
-type Result = { name: string; label: string } & (
-  { creds: Credentials; usage: Usage } | { error: string }
-);
+type Report = { json: unknown; text: string };
+type Result = { name: string; label: string } & (Report | { error: string });
 
 const collect = (value: string, previous: string[]) => [...previous, value];
+
+async function report(section: Section, label: string): Promise<Report> {
+  if (section.codex_home) {
+    const codex = await fetchCodexUsage(
+      await resolveCodexCredentials(section.codex_home),
+    );
+    return { json: codex, text: formatCodexProfile(label, codex) };
+  }
+  const creds = await resolveCredentials(section);
+  const usage = await fetchUsage(creds.token);
+  return { json: usage, text: formatProfile(label, creds, usage) };
+}
 
 const program = new Command()
   .name("agent-usage")
   .description(
-    "Print Claude.ai plan quota usage for accounts in an INI config file",
+    "Print Claude and ChatGPT (Codex) plan quota usage for accounts in an INI config file",
   )
   .option(
     "-c, --config <path>",
@@ -51,8 +68,7 @@ const program = new Command()
         try {
           if (!section)
             throw new Error(`no [${name}] section in ${configPath}`);
-          const creds = await resolveCredentials(section);
-          return { name, label, creds, usage: await fetchUsage(creds.token) };
+          return { name, label, ...(await report(section, label)) };
         } catch (e) {
           return {
             name,
@@ -67,15 +83,13 @@ const program = new Command()
       const out = Object.fromEntries(
         results.map((r) => [
           r.name,
-          "error" in r ? { error: r.error } : r.usage,
+          "error" in r ? { error: r.error } : r.json,
         ]),
       );
       console.log(JSON.stringify(out, null, 2));
     } else {
       const blocks = results.map((r) =>
-        "error" in r
-          ? formatError(r.label, r.error)
-          : formatProfile(r.label, r.creds, r.usage),
+        "error" in r ? formatError(r.label, r.error) : r.text,
       );
       console.log(blocks.join("\n\n"));
     }
@@ -89,11 +103,13 @@ program
     const config = await loadConfig(expandHome(program.opts<Options>().config));
     const width = Math.max(0, ...[...config.keys()].map((name) => name.length));
     for (const [name, section] of config) {
-      const source = section.oauth_token
-        ? "oauth_token"
-        : section.claude_config_dir
-          ? `claude_config_dir = ${section.claude_config_dir}`
-          : "(no credentials)";
+      const source = section.codex_home
+        ? `codex_home = ${section.codex_home}`
+        : section.oauth_token
+          ? "oauth_token"
+          : section.claude_config_dir
+            ? `claude_config_dir = ${section.claude_config_dir}`
+            : "(no credentials)";
       console.log(`${name.padEnd(width)}  ${source}`);
     }
   });

@@ -1,4 +1,5 @@
 import { styleText } from "node:util";
+import type { CodexReport, CodexUsage } from "./codex";
 import type { Credentials } from "./credentials";
 import type { ExtraUsage, Usage, UsageLimit } from "./usage";
 
@@ -117,28 +118,18 @@ function extraUsageText(extra: ExtraUsage, paint: Paint): string | undefined {
   return text;
 }
 
-export function formatProfile(
+function renderProfile(
+  paint: Paint,
   name: string,
-  creds: Credentials,
-  usage: Usage,
-  { now = Date.now(), color }: FormatOptions = {},
+  plan: string | null | undefined,
+  rows: Row[],
+  details: [label: string, text: string][],
+  now: number,
 ): string {
-  const paint = painter(color);
   const header = paint("bold", `[${name}]`);
-  const lines = [
-    creds.subscriptionType
-      ? `${header}  ${paint("dim", creds.subscriptionType)}`
-      : header,
-  ];
-  const rows = usageRows(usage);
-  const extra = usage.extra_usage
-    ? extraUsageText(usage.extra_usage, paint)
-    : undefined;
-  const labelWidth =
-    Math.max(
-      ...rows.map((r) => r.label.length),
-      extra ? "Extra usage".length : 0,
-    ) + 2;
+  const lines = [plan ? `${header}  ${paint("dim", plan)}` : header];
+  const labels = [...rows.map((r) => r.label), ...details.map(([l]) => l)];
+  const labelWidth = Math.max(...labels.map((l) => l.length)) + 2;
 
   if (!rows.length)
     lines.push(`  ${paint("dim", "no plan usage limits reported")}`);
@@ -157,8 +148,105 @@ export function formatProfile(
       `  ${row.label.padEnd(labelWidth)}${bar(row.percent, paint)} ${percent}${reset}`,
     );
   }
-  if (extra) lines.push(`  ${"Extra usage".padEnd(labelWidth)}${extra}`);
+  for (const [label, text] of details)
+    lines.push(`  ${label.padEnd(labelWidth)}${text}`);
   return lines.join("\n");
+}
+
+export function formatProfile(
+  name: string,
+  creds: Credentials,
+  usage: Usage,
+  { now = Date.now(), color }: FormatOptions = {},
+): string {
+  const paint = painter(color);
+  const extra = usage.extra_usage
+    ? extraUsageText(usage.extra_usage, paint)
+    : undefined;
+  return renderProfile(
+    paint,
+    name,
+    creds.subscriptionType,
+    usageRows(usage),
+    extra ? [["Extra usage", extra]] : [],
+    now,
+  );
+}
+
+function windowLabel(seconds: number): string {
+  const hours = Math.round(seconds / 3600);
+  if (hours === 168) return "Weekly";
+  return hours < 24 ? `Session (${hours}h)` : `${Math.round(hours / 24)}-day`;
+}
+
+function codexRows(usage: CodexUsage): Row[] {
+  const limit = usage.rate_limit;
+  return [limit?.primary_window, limit?.secondary_window].flatMap((w) =>
+    w
+      ? [
+          {
+            label: windowLabel(w.limit_window_seconds),
+            percent: w.used_percent,
+            resetsAt:
+              w.reset_at != null
+                ? new Date(w.reset_at * 1000).toISOString()
+                : null,
+          },
+        ]
+      : [],
+  );
+}
+
+function creditsText(usage: CodexUsage, paint: Paint): string | undefined {
+  const credits = usage.credits;
+  if (credits?.unlimited) return "unlimited";
+  const balance = Number(credits?.balance ?? 0);
+  if (!(balance > 0)) return undefined;
+  const text = balance.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  // With the plan limit reached, Codex keeps working by spending credits.
+  return usage.rate_limit?.limit_reached
+    ? text + paint("dim", "  in use until the limit resets")
+    : text;
+}
+
+function resetsText(
+  { usage, reset_credits }: CodexReport,
+  now: number,
+  paint: Paint,
+): string | undefined {
+  const count = usage.rate_limit_reset_credits?.available_count;
+  if (!count) return undefined;
+  const expiries = (reset_credits?.credits ?? []).flatMap((c) =>
+    c.status === "available" && c.expires_at ? [Date.parse(c.expires_at)] : [],
+  );
+  const next = expiries.length
+    ? paint(
+        "dim",
+        `  next expires in ${formatDuration(Math.min(...expiries) - now)}`,
+      )
+    : "";
+  return `${count} available${next}`;
+}
+
+export function formatCodexProfile(
+  name: string,
+  report: CodexReport,
+  { now = Date.now(), color }: FormatOptions = {},
+): string {
+  const paint = painter(color);
+  const details: [string, string][] = [];
+  const credits = creditsText(report.usage, paint);
+  if (credits) details.push(["Credits", credits]);
+  const resets = resetsText(report, now, paint);
+  if (resets) details.push(["Limit resets", resets]);
+  return renderProfile(
+    paint,
+    name,
+    report.usage.plan_type,
+    codexRows(report.usage),
+    details,
+    now,
+  );
 }
 
 export function formatError(

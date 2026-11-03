@@ -84,7 +84,9 @@ export async function resolveCredentials(
   if (section.oauth_token)
     return { token: section.oauth_token, source: "oauth_token" };
   if (!section.claude_config_dir)
-    throw new Error("section needs oauth_token or claude_config_dir");
+    throw new Error(
+      "section needs claude_config_dir, oauth_token or codex_home",
+    );
 
   const configDir = resolve(expandHome(section.claude_config_dir));
   const creds = await readConfigDir(configDir);

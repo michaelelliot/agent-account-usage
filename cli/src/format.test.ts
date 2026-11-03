@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { stripVTControlCharacters } from "node:util";
-import { bar, formatDuration, formatError, formatProfile } from "./format";
+import type { CodexReport } from "./codex";
+import {
+  bar,
+  formatCodexProfile,
+  formatDuration,
+  formatError,
+  formatProfile,
+} from "./format";
 import type { Usage } from "./usage";
 
 const NOW = Date.parse("2026-10-28T15:30:00Z");
@@ -118,6 +125,78 @@ describe("formatProfile", () => {
     expect(formatProfile("p", creds, {}, PLAIN)).toBe(
       "[p]  max\n  no plan usage limits reported",
     );
+  });
+});
+
+describe("formatCodexProfile", () => {
+  // Trimmed from real /wham/usage and /wham/rate-limit-reset-credits responses.
+  const report: CodexReport = {
+    usage: {
+      plan_type: "pro",
+      rate_limit: {
+        limit_reached: true,
+        primary_window: {
+          used_percent: 100,
+          limit_window_seconds: 604800,
+          reset_at: NOW / 1000 + (11 * 60 + 24) * 60,
+        },
+        secondary_window: null,
+      },
+      credits: { has_credits: true, unlimited: false, balance: "60511.46302" },
+      rate_limit_reset_credits: { available_count: 3 },
+    },
+    reset_credits: {
+      credits: [
+        { status: "redeemed", expires_at: "2026-10-29T00:00:00Z" },
+        { status: "available", expires_at: "2026-12-01T22:27:46.796390Z" },
+        { status: "available", expires_at: "2026-11-01T19:30:00.660200Z" },
+      ],
+    },
+  };
+
+  test("renders windows, credits in use and the soonest reset expiry", () => {
+    expect(formatCodexProfile("ChatGPT", report, PLAIN)).toBe(
+      [
+        "[ChatGPT]  pro",
+        "  Weekly        ████████████████████ 100%  resets in 11h 24m",
+        "  Credits       60,511  in use until the limit resets",
+        "  Limit resets  3 available  next expires in 4d 4h",
+      ].join("\n"),
+    );
+  });
+
+  test("labels 5-hour windows as the session and hides empty extras", () => {
+    const usage: CodexReport["usage"] = {
+      plan_type: "plus",
+      rate_limit: {
+        limit_reached: false,
+        primary_window: {
+          used_percent: 12,
+          limit_window_seconds: 18000,
+          reset_at: null,
+        },
+        secondary_window: {
+          used_percent: 40,
+          limit_window_seconds: 604800,
+          reset_at: null,
+        },
+      },
+      credits: { has_credits: false, unlimited: false, balance: "0" },
+      rate_limit_reset_credits: { available_count: 0 },
+    };
+    expect(formatCodexProfile("p", { usage, reset_credits: null }, PLAIN)).toBe(
+      [
+        "[p]  plus",
+        "  Session (5h)  ██░░░░░░░░░░░░░░░░░░  12%",
+        "  Weekly        ████████░░░░░░░░░░░░  40%",
+      ].join("\n"),
+    );
+  });
+
+  test("shows the reset count alone when expiry dates are unavailable", () => {
+    expect(
+      formatCodexProfile("p", { ...report, reset_credits: null }, PLAIN),
+    ).toEndWith("\n  Limit resets  3 available");
   });
 });
 

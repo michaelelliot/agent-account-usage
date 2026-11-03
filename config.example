@@ -3,6 +3,8 @@
 # Credentials use one of:
 #   claude_config_dir  a Claude Code config dir; the OAuth token Claude Code stored for it is read (read-only)
 #   oauth_token        a literal Claude OAuth access token (sk-ant-oat01-...); wins if both are set
+#   codex_home         a Codex home dir (~/.codex unless you set CODEX_HOME), where the ChatGPT desktop
+#                      app and the codex CLI save your ChatGPT login (read-only)
 
 [default]
 name = "Default"
@@ -13,3 +15,7 @@ claude_config_dir = ~/.claude-personal
 
 [work]
 oauth_token = sk-ant-oat01-...
+
+[chatgpt]
+name = "ChatGPT"
+codex_home = ~/.codex
