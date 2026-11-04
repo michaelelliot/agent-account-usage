@@ -208,15 +208,14 @@ private struct ProfileSection: View {
                     ExtraUsageView(summary: extra)
                 }
                 if let credits = profile.credits {
-                    DetailRow(
-                        label: "Credits", value: credits.balance,
-                        caption: credits.isInUse ? "In use until the limit resets" : nil)
+                    DetailRow(label: "Credits", value: credits.balance) {
+                        if credits.isInUse { Text("In use until the limit resets") }
+                    }
                 }
                 if let resets = profile.resets {
-                    DetailRow(
-                        label: "Limit resets", value: "\(resets.available) available",
-                        caption: resets.nextExpiry.map { "Next expires in \(formatDuration($0.timeIntervalSinceNow))" },
-                        help: resets.nextExpiry?.formatted(date: .abbreviated, time: .shortened))
+                    DetailRow(label: "Limit resets", value: "\(resets.available) available") {
+                        if let nextExpiry = resets.nextExpiry { Countdown(prefix: "Next expires in", date: nextExpiry) }
+                    }
                 }
             case let .failure(error):
                 ErrorText(message: error.message)
@@ -239,10 +238,9 @@ private struct UsageRowView: View {
             }
             UsageBar(percent: row.percent, color: row.level.color)
             if let resetsAt = row.resetsAt {
-                Text("Resets in \(formatDuration(resetsAt.timeIntervalSinceNow))")
+                Countdown(prefix: "Resets in", date: resetsAt)
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                    .help(resetsAt.formatted(date: .abbreviated, time: .shortened))
             }
         }
         .font(.callout)
@@ -274,12 +272,25 @@ private struct ExtraUsageView: View {
     }
 }
 
+/// "Resets in 2h 13m", kept current every minute. Computing it in a parent's body instead goes stale,
+/// because SwiftUI only re-renders when the usage data changes, and a maxed-out limit doesn't.
+private struct Countdown: View {
+    let prefix: String
+    let date: Date
+
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            Text("\(prefix) \(formatDuration(date.timeIntervalSince(context.date)))")
+        }
+        .help(date.formatted(date: .abbreviated, time: .shortened))
+    }
+}
+
 /// A label and value with an optional caption below, like the extra usage row.
-private struct DetailRow: View {
+private struct DetailRow<Caption: View>: View {
     let label: String
     let value: String
-    var caption: String?
-    var help: String?
+    @ViewBuilder var caption: Caption
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -288,12 +299,9 @@ private struct DetailRow: View {
                 Spacer()
                 Text(value).monospacedDigit()
             }
-            if let caption {
-                Text(caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .help(help ?? "")
-            }
+            caption
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .font(.callout)
     }
