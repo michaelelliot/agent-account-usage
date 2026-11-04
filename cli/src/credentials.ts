@@ -18,6 +18,18 @@ interface StoredCredentials {
   };
 }
 
+// The exp claim of a JWT access token, in ms.
+export function jwtExpiry(token: string): number | undefined {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1]!, "base64url").toString(),
+    );
+    return typeof payload.exp === "number" ? payload.exp * 1000 : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Mirrors how Claude Code names its keychain item for a given CLAUDE_CONFIG_DIR.
 export function keychainServices(configDir: string): string[] {
   const hash = createHash("sha256")
@@ -31,9 +43,11 @@ export function keychainServices(configDir: string): string[] {
     : [suffixed];
 }
 
-async function readKeychain(service: string): Promise<string | undefined> {
+export async function readKeychain(
+  service: string,
+  account = process.env.USER || userInfo().username,
+): Promise<string | undefined> {
   if (process.platform !== "darwin") return undefined;
-  const account = process.env.USER || userInfo().username;
   const proc = Bun.spawn(
     ["security", "find-generic-password", "-a", account, "-w", "-s", service],
     {
@@ -85,7 +99,7 @@ export async function resolveCredentials(
     return { token: section.oauth_token, source: "oauth_token" };
   if (!section.claude_config_dir)
     throw new Error(
-      "section needs claude_config_dir, oauth_token or codex_home",
+      "section needs claude_config_dir, oauth_token, codex_home or cursor_dir",
     );
 
   const configDir = resolve(expandHome(section.claude_config_dir));

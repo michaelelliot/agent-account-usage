@@ -6,6 +6,7 @@ import {
   formatCodexProfile,
   formatDuration,
   formatError,
+  formatGrokProfile,
   formatProfile,
 } from "./format";
 import type { Usage } from "./usage";
@@ -197,6 +198,57 @@ describe("formatCodexProfile", () => {
     expect(
       formatCodexProfile("p", { ...report, reset_credits: null }, PLAIN),
     ).toEndWith("\n  Limit resets  3 available");
+  });
+});
+
+describe("formatGrokProfile", () => {
+  test("renders the weekly window and the unified Cursor plan", () => {
+    // Trimmed from a real GetSandUsageStatus response.
+    const usage = {
+      currentPeriodStart: "2026-10-23T14:24:32.444Z",
+      nextResetTimestampUtc: "2026-10-30T14:24:32.444Z",
+      usagePercent: 31.892770105605198,
+      hasAvailableUsage: true,
+      grokPlanLabel: "Grok Bot Plan",
+      cursorPlanName: "Ultra",
+      isUnified: true,
+    };
+    expect(
+      formatGrokProfile("Grok", { usage, banked_resets: null }, PLAIN),
+    ).toBe(
+      [
+        "[Grok]  Ultra",
+        "  Weekly  ██████░░░░░░░░░░░░░░  32%  resets in 1d 22h",
+      ].join("\n"),
+    );
+  });
+
+  test("shows banked resets and the soonest expiry", () => {
+    const usage = {
+      usagePercent: 100,
+      availableBankedResetCount: "2",
+      grokPlanLabel: "SuperGrok",
+    };
+    const banked_resets = {
+      resets: [
+        { expiresAt: "2026-11-20T00:00:00Z" },
+        { expiresAt: "2026-11-01T15:30:00Z" },
+      ],
+    };
+    expect(formatGrokProfile("g", { usage, banked_resets }, PLAIN)).toBe(
+      [
+        "[g]  SuperGrok",
+        "  Weekly        ████████████████████ 100%",
+        "  Limit resets  2 available  next expires in 4d 0h",
+      ].join("\n"),
+    );
+  });
+
+  test("shows no limits for a pooled enterprise allowance", () => {
+    const usage = { usagePercent: 5, usesPooledEnterpriseAllowance: true };
+    expect(formatGrokProfile("g", { usage, banked_resets: null }, PLAIN)).toBe(
+      "[g]\n  no plan usage limits reported",
+    );
   });
 });
 

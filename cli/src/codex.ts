@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
 import { expandHome } from "./config";
+import { jwtExpiry } from "./credentials";
 
 // What Codex itself calls for /status. Undocumented, like the Claude endpoint.
 export const CODEX_BASE_URL = "https://chatgpt.com/backend-api/wham";
@@ -45,17 +46,6 @@ export interface CodexResetCredits {
 export interface CodexReport {
   usage: CodexUsage;
   reset_credits: CodexResetCredits | null;
-}
-
-function jwtExpiry(token: string): number | undefined {
-  try {
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1]!, "base64url").toString(),
-    );
-    return typeof payload.exp === "number" ? payload.exp * 1000 : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 // Reads the ChatGPT login Codex (CLI or the ChatGPT desktop app) saved in <codex_home>/auth.json.

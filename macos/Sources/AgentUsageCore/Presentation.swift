@@ -63,6 +63,31 @@ extension ProfileUsage {
     }
 }
 
+extension ProfileUsage {
+    init(grok usage: GrokUsage, bankedResets: [GrokBankedReset]) {
+        var rows: [UsageRow] = []
+        // Grok Bot shows nothing for a pooled enterprise allowance either.
+        if let percent = usage.usagePercent, usage.usesPooledEnterpriseAllowance != true {
+            let start = usage.currentPeriodStart.flatMap(parseDate)
+            let end = usage.nextResetTimestampUtc.flatMap(parseDate)
+            let seconds = start.flatMap { start in end.map { $0.timeIntervalSince(start) } } ?? 0
+            let label = seconds > 0 ? windowLabel(seconds: seconds) : "Weekly"
+            rows = [UsageRow(label: label, percent: percent, resetsAt: end)]
+        }
+        let available = usage.availableBankedResetCount?.value ?? 0
+        let expiries = bankedResets.compactMap { $0.expiresAt.flatMap(parseDate) }
+        self.init(
+            // A unified Cursor and Grok account is on a Cursor plan.
+            subscriptionType: usage.isUnified == true
+                ? usage.cursorPlanName ?? usage.grokPlanLabel : usage.grokPlanLabel ?? usage.cursorPlanName,
+            rows: rows,
+            extraUsage: nil,
+            credits: nil,
+            resets: available > 0 ? ResetsSummary(available: available, nextExpiry: expiries.min()) : nil
+        )
+    }
+}
+
 extension CreditsSummary {
     /// Nil when there are no credits to spend.
     init?(_ credits: CodexUsage.Credits, limitReached: Bool) {

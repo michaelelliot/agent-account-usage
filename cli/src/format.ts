@@ -1,6 +1,7 @@
 import { styleText } from "node:util";
 import type { CodexReport, CodexUsage } from "./codex";
 import type { Credentials } from "./credentials";
+import type { GrokReport, GrokUsage } from "./grok";
 import type { ExtraUsage, Usage, UsageLimit } from "./usage";
 
 const BAR_WIDTH = 20;
@@ -209,16 +210,14 @@ function creditsText(usage: CodexUsage, paint: Paint): string | undefined {
     : text;
 }
 
+// Available full resets of the usage limits, and when the soonest one expires.
 function resetsText(
-  { usage, reset_credits }: CodexReport,
+  count: number,
+  expiries: number[],
   now: number,
   paint: Paint,
 ): string | undefined {
-  const count = usage.rate_limit_reset_credits?.available_count;
   if (!count) return undefined;
-  const expiries = (reset_credits?.credits ?? []).flatMap((c) =>
-    c.status === "available" && c.expires_at ? [Date.parse(c.expires_at)] : [],
-  );
   const next = expiries.length
     ? paint(
         "dim",
@@ -237,7 +236,15 @@ export function formatCodexProfile(
   const details: [string, string][] = [];
   const credits = creditsText(report.usage, paint);
   if (credits) details.push(["Credits", credits]);
-  const resets = resetsText(report, now, paint);
+  const expiries = (report.reset_credits?.credits ?? []).flatMap((c) =>
+    c.status === "available" && c.expires_at ? [Date.parse(c.expires_at)] : [],
+  );
+  const resets = resetsText(
+    report.usage.rate_limit_reset_credits?.available_count ?? 0,
+    expiries,
+    now,
+    paint,
+  );
   if (resets) details.push(["Limit resets", resets]);
   return renderProfile(
     paint,
@@ -245,6 +252,50 @@ export function formatCodexProfile(
     report.usage.plan_type,
     codexRows(report.usage),
     details,
+    now,
+  );
+}
+
+function grokRows(usage: GrokUsage): Row[] {
+  // Grok Bot shows nothing for these either.
+  if (usage.usagePercent == null || usage.usesPooledEnterpriseAllowance)
+    return [];
+  const start = Date.parse(usage.currentPeriodStart ?? "");
+  const end = Date.parse(usage.nextResetTimestampUtc ?? "");
+  return [
+    {
+      label: end > start ? windowLabel((end - start) / 1000) : "Weekly",
+      percent: usage.usagePercent,
+      resetsAt: usage.nextResetTimestampUtc ?? null,
+    },
+  ];
+}
+
+export function formatGrokProfile(
+  name: string,
+  { usage, banked_resets }: GrokReport,
+  { now = Date.now(), color }: FormatOptions = {},
+): string {
+  const paint = painter(color);
+  // A unified Cursor and Grok account is on a Cursor plan.
+  const plan = usage.isUnified
+    ? usage.cursorPlanName || usage.grokPlanLabel
+    : usage.grokPlanLabel || usage.cursorPlanName;
+  const expiries = (banked_resets?.resets ?? []).flatMap((r) =>
+    r.expiresAt ? [Date.parse(r.expiresAt)] : [],
+  );
+  const resets = resetsText(
+    Number(usage.availableBankedResetCount ?? 0),
+    expiries,
+    now,
+    paint,
+  );
+  return renderProfile(
+    paint,
+    name,
+    plan,
+    grokRows(usage),
+    resets ? [["Limit resets", resets]] : [],
     now,
   );
 }

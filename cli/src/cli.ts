@@ -8,7 +8,13 @@ import {
   type Section,
 } from "./config";
 import { resolveCredentials } from "./credentials";
-import { formatCodexProfile, formatError, formatProfile } from "./format";
+import {
+  formatCodexProfile,
+  formatError,
+  formatGrokProfile,
+  formatProfile,
+} from "./format";
+import { fetchGrokUsage, resolveGrokToken } from "./grok";
 import { fetchUsage } from "./usage";
 
 interface Options {
@@ -30,6 +36,12 @@ async function report(section: Section, label: string): Promise<Report> {
     );
     return { json: codex, text: formatCodexProfile(label, codex) };
   }
+  if (section.cursor_dir) {
+    const grok = await fetchGrokUsage(
+      await resolveGrokToken(section.cursor_dir),
+    );
+    return { json: grok, text: formatGrokProfile(label, grok) };
+  }
   const creds = await resolveCredentials(section);
   const usage = await fetchUsage(creds.token);
   return { json: usage, text: formatProfile(label, creds, usage) };
@@ -38,7 +50,7 @@ async function report(section: Section, label: string): Promise<Report> {
 const program = new Command()
   .name("agent-usage")
   .description(
-    "Print Claude and ChatGPT (Codex) plan quota usage for accounts in an INI config file",
+    "Print Claude, ChatGPT (Codex) and Grok plan quota usage for accounts in an INI config file",
   )
   .option(
     "-c, --config <path>",
@@ -105,11 +117,13 @@ program
     for (const [name, section] of config) {
       const source = section.codex_home
         ? `codex_home = ${section.codex_home}`
-        : section.oauth_token
-          ? "oauth_token"
-          : section.claude_config_dir
-            ? `claude_config_dir = ${section.claude_config_dir}`
-            : "(no credentials)";
+        : section.cursor_dir
+          ? `cursor_dir = ${section.cursor_dir}`
+          : section.oauth_token
+            ? "oauth_token"
+            : section.claude_config_dir
+              ? `claude_config_dir = ${section.claude_config_dir}`
+              : "(no credentials)";
       console.log(`${name.padEnd(width)}  ${source}`);
     }
   });

@@ -89,18 +89,6 @@ public enum CodexAuth {
         }
         return CodexCredentials(token: token, accountID: auth.tokens?.accountId, source: file.path, expiresAt: expiresAt)
     }
-
-    static func jwtExpiry(_ token: String) -> Date? {
-        let parts = token.split(separator: ".")
-        guard parts.count > 1 else { return nil }
-        var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
-        base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
-        guard let data = Data(base64Encoded: base64),
-            let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let exp = payload["exp"] as? Double
-        else { return nil }
-        return Date(timeIntervalSince1970: exp)
-    }
 }
 
 public enum CodexClient {

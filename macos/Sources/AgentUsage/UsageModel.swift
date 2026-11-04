@@ -18,7 +18,7 @@ final class UsageModel {
     private static let orderKey = "profileOrder"
     private static let configTemplate = """
         # agent-usage profiles: one [section] per account.
-        # Keys: name (optional label), and claude_config_dir, oauth_token or codex_home.
+        # Keys: name (optional label), and claude_config_dir, oauth_token, codex_home or cursor_dir.
 
         [default]
         claude_config_dir = ~/.claude

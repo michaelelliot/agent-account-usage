@@ -18,6 +18,19 @@ private struct StoredCredentials: Decodable {
     let claudeAiOauth: OAuth?
 }
 
+/// The `exp` claim of a JWT access token.
+func jwtExpiry(_ token: String) -> Date? {
+    let parts = token.split(separator: ".")
+    guard parts.count > 1 else { return nil }
+    var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+    base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+    guard let data = Data(base64Encoded: base64),
+        let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+        let exp = payload["exp"] as? Double
+    else { return nil }
+    return Date(timeIntervalSince1970: exp)
+}
+
 public enum CredentialStore {
     /// Mirrors how Claude Code names its keychain item for a given CLAUDE_CONFIG_DIR.
     public static func keychainServices(configDir: String) -> [String] {
@@ -34,7 +47,7 @@ public enum CredentialStore {
             return Credentials(token: token, source: "oauth_token", subscriptionType: nil, expiresAt: nil)
         }
         guard let dir = profile.values["claude_config_dir"], !dir.isEmpty else {
-            throw UsageError("section needs claude_config_dir, oauth_token or codex_home")
+            throw UsageError("section needs claude_config_dir, oauth_token, codex_home or cursor_dir")
         }
 
         let configDir = URL(fileURLWithPath: expandHome(dir)).standardizedFileURL.path
@@ -63,10 +76,10 @@ public enum CredentialStore {
 
     // Uses the `security` tool rather than the Security framework because Claude Code's keychain
     // items already trust it, so reading them doesn't prompt.
-    static func readKeychain(service: String) -> String? {
+    static func readKeychain(service: String, account: String? = nil) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        let account = ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
+        let account = account ?? ProcessInfo.processInfo.environment["USER"] ?? NSUserName()
         process.arguments = ["find-generic-password", "-a", account, "-w", "-s", service]
         let stdout = Pipe()
         process.standardOutput = stdout

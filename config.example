@@ -5,6 +5,9 @@
 #   oauth_token        a literal Claude OAuth access token (sk-ant-oat01-...); wins if both are set
 #   codex_home         a Codex home dir (~/.codex unless you set CODEX_HOME), where the ChatGPT desktop
 #                      app and the codex CLI save your ChatGPT login (read-only)
+#   cursor_dir         Cursor's data dir; shows Grok Bot usage for the Cursor account signed in there.
+#                      Cursor's saved login is encrypted, so macOS asks once to allow access to the
+#                      "Cursor Safe Storage" keychain item (read-only)
 
 [default]
 name = "Default"
@@ -19,3 +22,7 @@ oauth_token = sk-ant-oat01-...
 [chatgpt]
 name = "ChatGPT"
 codex_home = ~/.codex
+
+[grok]
+name = "Grok"
+cursor_dir = ~/Library/Application Support/Cursor

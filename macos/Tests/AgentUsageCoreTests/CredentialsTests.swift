@@ -25,7 +25,7 @@ struct CredentialsTests {
     }
 
     @Test func rejectsSectionWithoutCredentialKeys() {
-        #expect(throws: UsageError("section needs claude_config_dir, oauth_token or codex_home")) {
+        #expect(throws: UsageError("section needs claude_config_dir, oauth_token, codex_home or cursor_dir")) {
             try CredentialStore.resolve(Profile(id: "p"))
         }
     }

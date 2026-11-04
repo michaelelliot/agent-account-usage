@@ -67,14 +67,14 @@ public enum UsageClient {
         }
     }
 
-    /// Anthropic's `{"error": {"message"}}`, ChatGPT's `{"detail"}`, or the start of the body.
+    /// Anthropic's `{"error": {"message"}}`, ChatGPT's `{"detail"}`, Cursor's `{"message"}`, or the start of the body.
     static func errorMessage(_ data: Data) -> String {
         let body = String(decoding: data.prefix(200), as: UTF8.self)
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return body }
         if let error = json["error"] as? [String: Any], let message = error["message"] as? String {
             return message
         }
-        return json["detail"] as? String ?? body
+        return json["detail"] as? String ?? json["message"] as? String ?? body
     }
 }
 
@@ -114,6 +114,10 @@ func fetchReport(for profile: Profile) async -> ProfileReport {
             let creds = try CodexAuth.resolve(codexHome: codexHome)
             let (usage, resetCredits) = try await CodexClient.fetch(creds)
             result = .success(ProfileUsage(codex: usage, resetCredits: resetCredits))
+        } else if let cursorDir = profile.values["cursor_dir"], !cursorDir.isEmpty {
+            let token = try GrokAuth.resolve(cursorDir: cursorDir)
+            let (usage, bankedResets) = try await GrokClient.fetch(token: token)
+            result = .success(ProfileUsage(grok: usage, bankedResets: bankedResets))
         } else {
             let creds = try CredentialStore.resolve(profile)
             let usage = try await UsageClient.fetch(token: creds.token)
