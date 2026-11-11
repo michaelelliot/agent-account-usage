@@ -1,7 +1,9 @@
 # agent-usage config: copy to ~/.config/agent-usage/config
 # Each section is a profile. Optional `name` replaces the profile id in printed output.
+# Optional `claude_path` is where `claude` is, if it isn't on PATH or in a usual install dir (see README).
 # Credentials use one of:
-#   claude_config_dir  a Claude Code config dir; the OAuth token Claude Code stored for it is read (read-only)
+#   claude_config_dir  a Claude Code config dir; the OAuth token Claude Code stored for it is read, and if it
+#                      has expired, `claude -p /cost` is run so Claude Code refreshes it
 #   oauth_token        a literal Claude OAuth access token (sk-ant-oat01-...); wins if both are set
 #   codex_home         a Codex home dir (~/.codex unless you set CODEX_HOME), where the ChatGPT desktop
 #                      app and the codex CLI save your ChatGPT login (read-only)
