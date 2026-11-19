@@ -8,6 +8,8 @@
 	<string>SubSmasher</string>
 	<key>CFBundleExecutable</key>
 	<string>SubSmasher</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.subsmasher.SubSmasher</string>
 	<key>CFBundleInfoDictionaryVersion</key>

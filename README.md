@@ -1,3 +1,5 @@
+<img src="macos/Resources/AppIcon.png" width="128" alt="SubSmasher's icon: an orange plush toy hugging a usage gauge">
+
 # SubSmasher
 
 Shows plan quota usage for one or more Claude.ai, ChatGPT (Codex) and Grok accounts, either as a command-line tool or as a macOS menu bar app. Both read the same config file. For Claude that's the 5-hour session, weekly and per-model weekly limits plus extra usage; for ChatGPT it's the Codex limits, your credit balance and any limit resets you have available; for Grok it's Grok Bot's weekly usage and any banked resets.
@@ -114,4 +116,4 @@ SUBSMASHER_LIVE_TEST=1 swift test --filter live    # also hits the real API with
 ./scripts/screenshots.sh                           # re-renders the README's screenshots in docs/ from sample accounts
 ```
 
-Open `macos/Package.swift` in Xcode to work on it there. `SubSmasherCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `SubSmasher` holds the SwiftUI app.
+Open `macos/Package.swift` in Xcode to work on it there. `SubSmasherCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `SubSmasher` holds the SwiftUI app. `Resources/AppIcon.png` is the app icon, which `build-app.sh` turns into the bundle's `.icns`.
