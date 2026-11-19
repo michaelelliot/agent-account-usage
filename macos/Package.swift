@@ -11,5 +11,6 @@ let package = Package(
         .target(name: "AgentUsageCore"),
         .executableTarget(name: "AgentUsage", dependencies: ["AgentUsageCore"]),
         .testTarget(name: "AgentUsageCoreTests", dependencies: ["AgentUsageCore"]),
+        .testTarget(name: "AgentUsageTests", dependencies: ["AgentUsage", "AgentUsageCore"]),
     ]
 )

@@ -29,6 +29,12 @@ final class UsageModel {
         Task { await refreshLoop() }
     }
 
+    /// Shows `reports` as just fetched, without reading the config or refreshing. For the README's screenshots.
+    init(reports: [ProfileReport]) {
+        self.reports = reports
+        lastUpdated = .now
+    }
+
     private func refreshLoop() async {
         while !Task.isCancelled {
             await refresh(.timer)

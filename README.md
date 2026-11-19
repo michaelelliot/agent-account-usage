@@ -8,6 +8,10 @@ Shows plan quota usage for one or more Claude.ai, ChatGPT (Codex) and Grok accou
 | `macos/`         | Agent Usage, a SwiftUI menu bar app (Swift package) |
 | `config.example` | Sample config for both                              |
 
+<p align="center">
+  <img src="docs/menu.png" width="320" alt="The menu bar app's menu, showing usage for two Claude accounts, ChatGPT and Grok">
+</p>
+
 ## Config
 
 The config is an INI file in the style of `~/.aws/credentials`, at `~/.config/agent-usage/config` by default (override with `AGENT_USAGE_CONFIG`, or `-c` for the CLI). See [`config.example`](config.example).
@@ -49,27 +53,7 @@ Claude usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the sam
 
 ## CLI
 
-```
-$ agent-usage -a
-[default]  max
-  Session (5h)  ░░░░░░░░░░░░░░░░░░░░   0%
-  Weekly        ████████████████████  98%  resets in 1d 8h
-  Weekly Fable  ██░░░░░░░░░░░░░░░░░░   8%  resets in 1d 8h
-
-[personal]  max
-  Session (5h)  ░░░░░░░░░░░░░░░░░░░░   0%  resets in 4h 54m
-  Weekly        ██░░░░░░░░░░░░░░░░░░   8%  resets in 1d 14h
-  Weekly Fable  ░░░░░░░░░░░░░░░░░░░░   0%  resets in 1d 14h
-  Extra usage   $26.66 / $40.00 (67%)  disabled (out of credits)
-
-[ChatGPT]  pro
-  Weekly        ████████████████████ 100%  resets in 11h 24m
-  Credits       60,511  in use until the limit resets
-  Limit resets  3 available  next expires in 3d 4h
-
-[Grok]  Ultra
-  Weekly  ██████░░░░░░░░░░░░░░  32%  resets in 2d 18h
-```
+<img src="docs/cli.png" width="652" alt="The output of agent-usage -a for two Claude accounts, ChatGPT and Grok">
 
 Credits are what Codex spends once you hit a plan limit. Limit resets are one-off full resets you can use from the ChatGPT usage page; the soonest expiry is shown because they expire.
 
@@ -127,6 +111,7 @@ cd macos
 swift run AgentUsage                               # run without bundling
 swift test
 AGENT_USAGE_LIVE_TEST=1 swift test --filter live   # also hits the real API with your config
+./scripts/screenshots.sh                           # re-renders the README's screenshots in docs/ from sample accounts
 ```
 
 Open `macos/Package.swift` in Xcode to work on it there. `AgentUsageCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `AgentUsage` holds the SwiftUI app.
