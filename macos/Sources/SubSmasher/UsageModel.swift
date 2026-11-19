@@ -123,32 +123,25 @@ final class UsageModel {
         peakPercent.map { "\(Int($0.rounded()))%" }
     }
 
-    /// Escalates as the top account nears its limit: the needle climbs, turns orange, then red, then catches fire.
-    /// Uses the rounded percentage so the icon agrees with the number beside it.
-    var menuBarSymbol: (name: String, color: NSColor?) {
-        guard let peak = peakPercent?.rounded() else {
-            let name =
-                configError != nil || primaryReport != nil
-                ? "exclamationmark.triangle" : "gauge.with.dots.needle.bottom.50percent"
-            return (name, nil)
-        }
-        switch peak {
-        case ..<50: return ("gauge.with.dots.needle.33percent", nil)
-        case ..<75: return ("gauge.with.dots.needle.50percent", nil)
-        case ..<90: return ("gauge.with.dots.needle.67percent", .systemOrange)
-        case ..<95: return ("gauge.open.with.lines.needle.84percent.exclamation", .systemRed)
-        default: return ("flame.fill", .systemRed)
-        }
-    }
-
-    /// A template image (drawn in the menu bar's own colour) until usage needs attention, then tinted.
+    /// The plush toy hugging a gauge whose needle shows the top account's usage, in the menu bar's own colour while
+    /// there's plenty left, then yellow from 60%, orange from 70% and red from 90%, as the menu's bars turn orange and
+    /// red. A warning triangle when the config can't be read or the top account has no usage to show. Uses the rounded
+    /// percentage so the icon agrees with the number beside it.
     var menuBarImage: NSImage {
-        let (name, color) = menuBarSymbol
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "SubSmasher") ?? NSImage()
-        guard let color, let tinted = image.withSymbolConfiguration(.init(paletteColors: [color])) else {
-            return image
+        guard let peak = peakPercent?.rounded() else {
+            guard configError == nil, primaryReport == nil else {
+                return NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: "SubSmasher")
+                    ?? NSImage()
+            }
+            return MenuBarIcon.image(percent: nil, color: nil)
         }
-        tinted.isTemplate = false
-        return tinted
+        let color: NSColor? =
+            switch peak {
+            case ..<60: nil
+            case ..<70: MenuBarIcon.yellow
+            case ..<90: .systemOrange
+            default: .systemRed
+            }
+        return MenuBarIcon.image(percent: peak, color: color)
     }
 }
