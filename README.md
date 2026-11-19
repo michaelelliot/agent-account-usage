@@ -21,7 +21,8 @@ claude_config_dir = ~/.claude
 claude_config_dir = ~/.claude-personal
 
 [work]
-oauth_token = sk-ant-oat01-...
+name = "Work"
+setup_token = sk-ant-oat01-...
 
 [chatgpt]
 name = "ChatGPT"
@@ -35,15 +36,16 @@ cursor_dir = ~/Library/Application Support/Cursor
 Each section needs one of:
 
 - `claude_config_dir`: a Claude Code config directory (what you'd pass as `CLAUDE_CONFIG_DIR`). The OAuth token Claude Code stored for it is read from the macOS keychain, or from `<dir>/.credentials.json` on other platforms. Log in once with `CLAUDE_CONFIG_DIR=<dir> claude /login`.
-- `oauth_token`: a literal Claude OAuth access token. Takes precedence over `claude_config_dir` if both are set.
+- `setup_token`: a token printed by `claude setup-token`, run while that account is signed in to claude.ai in your browser. It lasts a year and nothing refreshes it, so it can't be signed out by Claude Code or by these tools. Its usage is read differently (see below). Takes precedence over `oauth_token` and `claude_config_dir`.
+- `oauth_token`: a literal Claude OAuth access token from a full login. Takes precedence over `claude_config_dir` if both are set. A `claude setup-token` token looks the same but goes in `setup_token`, as it can't read the usage endpoint.
 - `codex_home`: a Codex home directory (what you'd pass as `CODEX_HOME`, `~/.codex` by default). The ChatGPT desktop app and the `codex` CLI both keep your ChatGPT login in `<dir>/auth.json`, and that's read. Sign in with either one first. A Codex signed in with an API key has no plan limits to show.
 - `cursor_dir`: Cursor's data directory (`~/Library/Application Support/Cursor` on macOS). Grok Bot is a Cursor app that signs in with a Cursor account, so this shows Grok Bot's usage for the account signed in to Cursor. Grok Bot keeps its own login somewhere it can't be read, so Cursor needs to be signed in to the same account. Cursor encrypts its saved login with a key in the macOS keychain, so the first read makes macOS ask to let `security` access "Cursor Safe Storage". Choose Always Allow or it will ask on every refresh. That also lets any other program that runs `security` read the key.
 
-An optional `name` is shown instead of the profile id (the CLI's `--json` stays keyed by profile id). An optional `claude_path` says where `claude` is, for refreshing that profile's token (see below). Values may be wrapped in `"` or `'` quotes.
+An optional `name` is shown instead of the profile id (the CLI's `--json` stays keyed by profile id). An optional `claude_path` says where `claude` is, for refreshing that profile's token (see below). An optional `probe_model` is a comma-separated list of models for a `setup_token` profile's check to try in turn. Values may be wrapped in `"` or `'` quotes.
 
 Tokens are only read: neither tool calls the OAuth refresh endpoint or writes a login, so neither can log Claude Code or Codex out. Claude Code access tokens expire after a few hours. When one has, both tools get Claude Code to refresh it by running `claude -p /cost` with that config dir (and with `CLAUDE_CONFIG_DIR` unset for a `~/.claude` login, which Claude Code keeps under a different keychain name). They run it from a temp directory, without loading project settings or MCP servers and without saving the session, then read the token again. `/cost` runs locally, so this doesn't call the model or use any quota. It takes a few seconds. `claude` is looked for on your PATH, then in `~/.local/bin`, `~/.claude/local`, `/opt/homebrew/bin` and `/usr/local/bin` (an app opened from Finder gets a minimal PATH). If refreshing fails, the app tries again after half an hour (straight away if you change `claude_path`); if the sign-in itself has ended, run `claude` yourself the same way. ChatGPT tokens last about 10 days and Codex refreshes them as you use it. Cursor's are long-lived and Cursor refreshes them.
 
-Claude usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the same endpoint Claude Code's `/usage` uses. ChatGPT usage comes from `GET https://chatgpt.com/backend-api/wham/usage` (and `/wham/rate-limit-reset-credits` for when your resets expire), which is what Codex uses. Grok usage comes from Cursor's `https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus` (and `ListSandBankedResets`), which is what Grok Bot uses. All of them are undocumented and may change.
+Claude usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the same endpoint Claude Code's `/usage` uses. A setup token can only send messages, so that endpoint refuses it. For a `setup_token` profile, both tools send a one-character message with `max_tokens: 1` to `POST https://api.anthropic.com/v1/messages` instead, and read the `anthropic-ratelimit-unified-*` headers of the response. The message goes to `claude-haiku-4-5-20251001`, or `claude-haiku-5-5` if the plan lacks that, unless you set `probe_model`. The headers give the 5-hour session, the weekly limit across all models, and whether the account is limited or on extra usage. They don't give the per-model weekly limits, the plan or extra usage amounts. Each check spends a few tokens of the plan, and one sent while no 5-hour session is running probably starts one. Anthropic's terms don't sanction using a subscription token outside its own apps, so this is at your own risk. ChatGPT usage comes from `GET https://chatgpt.com/backend-api/wham/usage` (and `/wham/rate-limit-reset-credits` for when your resets expire), which is what Codex uses. Grok usage comes from Cursor's `https://api2.cursor.sh/aiserver.v1.DashboardService/GetSandUsageStatus` (and `ListSandBankedResets`), which is what Grok Bot uses. All of them are undocumented and may change.
 
 ## CLI
 
@@ -85,7 +87,7 @@ bun link   # puts `agent-usage` on your PATH
 agent-usage                      # the [default] profile, or $AGENT_USAGE_PROFILE
 agent-usage -p work -p personal  # specific profiles
 agent-usage -a                   # every profile
-agent-usage --json               # raw API responses keyed by profile ({usage, reset_credits} for ChatGPT, {usage, banked_resets} for Grok)
+agent-usage --json               # raw API responses keyed by profile ({usage, reset_credits} for ChatGPT, {usage, banked_resets} for Grok, {model, status, headers} for a setup token)
 agent-usage list                 # profile names and credential source
 ```
 
@@ -104,7 +106,7 @@ bun fmt     # format
 
 ## macOS app
 
-A menu bar item showing a gauge and the highest utilization of the profile at the top of the list. The icon escalates as that gets close to the limit: the gauge's needle climbs at 50%, it turns orange at 75%, red with a warning at 90%, and becomes a red flame at 95%. Click it to see every profile's limits, reset times, extra usage, ChatGPT credits and limit resets, and errors. Drag a profile up or down to reorder them (moving one to the top changes what the menu bar shows); the app remembers the order, while the CLI keeps config file order. It refreshes every 5 minutes, and when opened if the data is more than a minute old. The gear button opens the config in your default text editor, creating a starter file if there isn't one.
+A menu bar item showing a gauge and the highest utilization of the profile at the top of the list. The icon escalates as that gets close to the limit: the gauge's needle climbs at 50%, it turns orange at 75%, red with a warning at 90%, and becomes a red flame at 95%. Click it to see every profile's limits, reset times, extra usage, ChatGPT credits and limit resets, and errors. Drag a profile up or down to reorder them (moving one to the top changes what the menu bar shows); the app remembers the order, while the CLI keeps config file order. It refreshes every 5 minutes, and when opened if the data is more than a minute old. A `setup_token` profile is checked less often, as each check spends a little of the plan: at most every 10 minutes, or once a minute when you open the menu. Once its 5-hour session has ended it isn't checked again until you press refresh, even after a relaunch, so the app doesn't start a new session for you, and the menu says how old its values are. After an error it backs off and keeps showing the last values. After an expired token or a refused request, it waits for you to press refresh. The gear button opens the config in your default text editor, creating a starter file if there isn't one.
 
 Needs macOS 14 or later and the Swift 6 toolchain that comes with Xcode.
 
@@ -127,4 +129,4 @@ swift test
 AGENT_USAGE_LIVE_TEST=1 swift test --filter live   # also hits the real API with your config
 ```
 
-Open `macos/Package.swift` in Xcode to work on it there. `AgentUsageCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`), and `AgentUsage` holds the SwiftUI app.
+Open `macos/Package.swift` in Xcode to work on it there. `AgentUsageCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `AgentUsage` holds the SwiftUI app.

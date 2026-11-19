@@ -175,7 +175,7 @@ export async function resolveCredentials(
     return { token: section.oauth_token, source: "oauth_token" };
   if (!section.claude_config_dir)
     throw new Error(
-      "section needs claude_config_dir, oauth_token, codex_home or cursor_dir",
+      "section needs setup_token, claude_config_dir, oauth_token, codex_home or cursor_dir",
     );
 
   const configDir = resolve(expandHome(section.claude_config_dir));

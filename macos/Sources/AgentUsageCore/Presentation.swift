@@ -88,6 +88,53 @@ extension ProfileUsage {
     }
 }
 
+extension ProfileUsage {
+    init(setupToken limits: UnifiedLimits, now: Date) {
+        self.init(
+            subscriptionType: nil, rows: limits.rows(now: now), extraUsage: limits.extraUsage, credits: nil,
+            resets: nil, status: limits.statusText)
+    }
+}
+
+extension UnifiedLimits {
+    /// A window whose reset time has passed by `now` has rolled over since it was read, so shows as unused. The
+    /// weekly limit is the one across all models: the headers don't carry the per-model ones, which often run out
+    /// first.
+    func rows(now: Date) -> [UsageRow] {
+        [("Session (5h)", fiveHour), ("Weekly (all models)", sevenDay)].compactMap { label, window in
+            guard let window, let utilization = window.utilization else { return nil }
+            if let resetsAt = window.resetsAt, resetsAt <= now {
+                return UsageRow(label: label, percent: 0, resetsAt: nil)
+            }
+            return UsageRow(label: label, percent: utilization * 100, resetsAt: window.resetsAt)
+        }
+    }
+
+    /// The reset that comes with extra usage is the billing period's, weeks away, so it isn't shown.
+    var extraUsage: ExtraUsageSummary? {
+        guard isOverage else { return nil }
+        let stopped = Self.isLimited(overageStatus)
+        let amount = !stopped ? "In use" : overageDisabledReason == "out_of_credits" ? "Used up" : "Off"
+        return ExtraUsageSummary(
+            amount: amount, percent: overageUtilization.map { $0 * 100 }, isEnabled: !stopped,
+            disabledReason: overageDisabledReason?.replacingOccurrences(of: "_", with: " "))
+    }
+
+    /// "Limited (weekly)" when a limit binds, or a status this doesn't know, as received. Nil when all is well. Some
+    /// responses only carry the windows' own statuses.
+    var statusText: String? {
+        let limitedWindow =
+            Self.isLimited(fiveHour?.status) ? "five_hour" : Self.isLimited(sevenDay?.status) ? "seven_day" : nil
+        guard let status = status ?? (limitedWindow == nil ? nil : "rejected"),
+            !["allowed", "allowed_warning", "active", "warning"].contains(status)
+        else { return nil }
+        guard Self.isLimited(status) else { return status }
+        let claim = representativeClaim ?? limitedWindow ?? ""
+        let window = ["five_hour": "session", "seven_day": "weekly", "overage": "extra usage"][claim]
+        return window.map { "Limited (\($0))" } ?? "Limited"
+    }
+}
+
 extension CreditsSummary {
     /// Nil when there are no credits to spend.
     init?(_ credits: CodexUsage.Credits, limitReached: Bool) {

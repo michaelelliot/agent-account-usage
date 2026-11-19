@@ -18,7 +18,7 @@ final class UsageModel {
     private static let orderKey = "profileOrder"
     private static let configTemplate = """
         # agent-usage profiles: one [section] per account.
-        # Keys: name (optional label), and claude_config_dir, oauth_token, codex_home or cursor_dir.
+        # Keys: name (optional label), and setup_token, claude_config_dir, oauth_token, codex_home or cursor_dir.
 
         [default]
         claude_config_dir = ~/.claude
@@ -31,19 +31,19 @@ final class UsageModel {
 
     private func refreshLoop() async {
         while !Task.isCancelled {
-            await refresh()
+            await refresh(.timer)
             try? await Task.sleep(for: Self.refreshInterval)
         }
     }
 
-    func refresh() async {
+    func refresh(_ trigger: RefreshTrigger) async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
         do {
             let profiles = try ConfigFile.load(from: configURL)
             configError = profiles.isEmpty ? "no profiles in \(configURL.path)" : nil
-            let fetched = await fetchReports(for: profiles)
+            let fetched = await fetchReports(for: profiles, trigger: trigger)
             // Read the order after fetching so a drag made during the refresh isn't undone.
             reports = ordered(fetched, by: savedOrder)
         } catch {
@@ -71,7 +71,7 @@ final class UsageModel {
 
     func refreshIfStale() {
         if let lastUpdated, Date.now.timeIntervalSince(lastUpdated) < Self.staleAfter { return }
-        Task { await refresh() }
+        Task { await refresh(.menuOpened) }
     }
 
     /// Opens the config in the default text editor, creating a starter file if there isn't one.

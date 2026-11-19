@@ -1,10 +1,14 @@
 # agent-usage config: copy to ~/.config/agent-usage/config
 # Each section is a profile. Optional `name` replaces the profile id in printed output.
 # Optional `claude_path` is where `claude` is, if it isn't on PATH or in a usual install dir (see README).
+# Optional `probe_model` is a comma-separated list of models a setup_token check tries in turn (see README).
 # Credentials use one of:
+#   setup_token        a token from `claude setup-token`, run while that account is signed in to claude.ai; lasts a
+#                      year. Usage is read from the rate-limit headers of a 1-token message, which spends a few
+#                      tokens of the plan (see README); wins over the next two
 #   claude_config_dir  a Claude Code config dir; the OAuth token Claude Code stored for it is read, and if it
 #                      has expired, `claude -p /cost` is run so Claude Code refreshes it
-#   oauth_token        a literal Claude OAuth access token (sk-ant-oat01-...); wins if both are set
+#   oauth_token        a literal Claude OAuth access token from a full login (sk-ant-oat01-...); wins if both are set
 #   codex_home         a Codex home dir (~/.codex unless you set CODEX_HOME), where the ChatGPT desktop
 #                      app and the codex CLI save your ChatGPT login (read-only)
 #   cursor_dir         Cursor's data dir; shows Grok Bot usage for the Cursor account signed in there.
@@ -19,7 +23,8 @@ claude_config_dir = ~/.claude
 claude_config_dir = ~/.claude-personal
 
 [work]
-oauth_token = sk-ant-oat01-...
+name = "Work"
+setup_token = sk-ant-oat01-...
 
 [chatgpt]
 name = "ChatGPT"

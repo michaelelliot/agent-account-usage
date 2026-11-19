@@ -13,8 +13,10 @@ import {
   formatError,
   formatGrokProfile,
   formatProfile,
+  formatSetupTokenProfile,
 } from "./format";
 import { fetchGrokUsage, resolveGrokToken } from "./grok";
+import { probeModels, probeUsage } from "./setup-token";
 import { fetchUsage } from "./usage";
 
 interface Options {
@@ -41,6 +43,13 @@ async function report(section: Section, label: string): Promise<Report> {
       await resolveGrokToken(section.cursor_dir),
     );
     return { json: grok, text: formatGrokProfile(label, grok) };
+  }
+  if (section.setup_token) {
+    const { report, limits } = await probeUsage(
+      section.setup_token,
+      probeModels(section.probe_model),
+    );
+    return { json: report, text: formatSetupTokenProfile(label, limits) };
   }
   const creds = await resolveCredentials(section);
   const usage = await fetchUsage(creds.token);
@@ -119,11 +128,13 @@ program
         ? `codex_home = ${section.codex_home}`
         : section.cursor_dir
           ? `cursor_dir = ${section.cursor_dir}`
-          : section.oauth_token
-            ? "oauth_token"
-            : section.claude_config_dir
-              ? `claude_config_dir = ${section.claude_config_dir}`
-              : "(no credentials)";
+          : section.setup_token
+            ? "setup_token"
+            : section.oauth_token
+              ? "oauth_token"
+              : section.claude_config_dir
+                ? `claude_config_dir = ${section.claude_config_dir}`
+                : "(no credentials)";
       console.log(`${name.padEnd(width)}  ${source}`);
     }
   });

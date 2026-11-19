@@ -144,7 +144,7 @@ struct UsageMenuView: View {
             }
             Spacer()
             Button {
-                Task { await model.refresh() }
+                Task { await model.refresh(.manual) }
             } label: {
                 Image(systemName: "arrow.clockwise")
             }
@@ -198,7 +198,9 @@ private struct ProfileSection: View {
             switch report.result {
             case let .success(profile):
                 let rows = profile.rows
-                if rows.isEmpty {
+                if rows.isEmpty && profile.extraUsage == nil && profile.credits == nil && profile.resets == nil
+                    && profile.status == nil
+                {
                     Text("No plan usage limits reported").font(.callout).foregroundStyle(.secondary)
                 }
                 ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
@@ -206,6 +208,14 @@ private struct ProfileSection: View {
                 }
                 if let extra = profile.extraUsage {
                     ExtraUsageView(summary: extra)
+                }
+                if let status = profile.status {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Status")
+                        Spacer()
+                        Text(status).foregroundStyle(.red)
+                    }
+                    .font(.callout)
                 }
                 if let credits = profile.credits {
                     DetailRow(label: "Credits", value: credits.balance) {
@@ -216,6 +226,18 @@ private struct ProfileSection: View {
                     DetailRow(label: "Limit resets", value: "\(resets.available) available") {
                         if let nextExpiry = resets.nextExpiry { Countdown(prefix: "Next expires in", date: nextExpiry) }
                     }
+                }
+                if let checkedAt = profile.checkedAt {
+                    Age(prefix: "Checked", date: checkedAt)
+                        .help(
+                            "Setup-token accounts are checked every 10 minutes while a 5-hour session is running, "
+                                + "and otherwise only when you refresh.")
+                }
+                if let refreshError = profile.refreshError {
+                    Text("Couldn't refresh: \(refreshError)")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             case let .failure(error):
                 ErrorText(message: error.message)
@@ -283,6 +305,21 @@ private struct Countdown: View {
             Text("\(prefix) \(formatDuration(date.timeIntervalSince(context.date)))")
         }
         .help(date.formatted(date: .abbreviated, time: .shortened))
+    }
+}
+
+/// "Checked 12m ago", kept current every minute.
+private struct Age: View {
+    let prefix: String
+    let date: Date
+
+    var body: some View {
+        // Ticks a whole number of minutes after `date`, where `.everyMinute` would read up to a minute low.
+        TimelineView(.periodic(from: date, by: 60)) { context in
+            Text("\(prefix) \(formatDuration(context.date.timeIntervalSince(date))) ago")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 }
 

@@ -61,7 +61,7 @@ describe("resolveCredentials", () => {
 
   test("rejects a section with no credential keys", async () => {
     await expect(resolveCredentials({})).rejects.toThrow(
-      "needs claude_config_dir, oauth_token, codex_home or cursor_dir",
+      "needs setup_token, claude_config_dir, oauth_token, codex_home or cursor_dir",
     );
   });
 

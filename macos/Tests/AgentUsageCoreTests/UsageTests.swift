@@ -128,7 +128,7 @@ struct UsageTests {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["AGENT_USAGE_LIVE_TEST"] != nil))
     func liveReportsForConfiguredProfiles() async throws {
         let profiles = try ConfigFile.load(from: ConfigFile.defaultURL)
-        for report in await fetchReports(for: profiles) {
+        for report in await fetchReports(for: profiles, trigger: .manual) {
             switch report.result {
             case let .success(profile):
                 var parts = profile.rows.map { "\($0.label) \(Int($0.percent.rounded()))%" }

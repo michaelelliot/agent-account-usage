@@ -1,6 +1,6 @@
 import Foundation
 
-public struct UsageError: LocalizedError, Sendable, Equatable {
+public struct UsageError: LocalizedError, Sendable, Equatable, Codable {
     public let message: String
 
     public init(_ message: String) {

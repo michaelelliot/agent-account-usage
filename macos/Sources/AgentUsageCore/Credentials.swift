@@ -79,7 +79,7 @@ public enum CredentialStore {
             return Credentials(token: token, source: "oauth_token", subscriptionType: nil, expiresAt: nil)
         }
         guard let dir = profile.values["claude_config_dir"], !dir.isEmpty else {
-            throw UsageError("section needs claude_config_dir, oauth_token, codex_home or cursor_dir")
+            throw UsageError("section needs setup_token, claude_config_dir, oauth_token, codex_home or cursor_dir")
         }
 
         let configDir = URL(fileURLWithPath: expandHome(dir)).standardizedFileURL.path

@@ -85,6 +85,12 @@ public struct ProfileUsage: Sendable {
     public let extraUsage: ExtraUsageSummary?
     public let credits: CreditsSummary?
     public let resets: ResetsSummary?
+    /// "Limited (weekly)", or a status this doesn't know, as received. Nil when all is well.
+    public var status: String? = nil
+    /// When these values were read, if not in this refresh: setup-token accounts aren't probed on every one.
+    public var checkedAt: Date? = nil
+    /// Why the latest refresh failed, when these are the values from before it.
+    public var refreshError: String? = nil
 }
 
 public struct ProfileReport: Sendable, Identifiable {
@@ -93,11 +99,22 @@ public struct ProfileReport: Sendable, Identifiable {
     public let result: Result<ProfileUsage, UsageError>
 }
 
+/// What started a refresh. A setup-token account's check spends a little of the plan, and one sent while no 5-hour
+/// window is running probably starts one, so those accounts are probed less often than others are refreshed.
+public enum RefreshTrigger: Sendable {
+    /// The periodic background refresh.
+    case timer
+    /// The menu opening.
+    case menuOpened
+    /// The refresh button, which always probes.
+    case manual
+}
+
 /// Fetches every profile in parallel; reports come back in the profiles' order.
-public func fetchReports(for profiles: [Profile]) async -> [ProfileReport] {
+public func fetchReports(for profiles: [Profile], trigger: RefreshTrigger) async -> [ProfileReport] {
     await withTaskGroup(of: (Int, ProfileReport).self) { group in
         for (index, profile) in profiles.enumerated() {
-            group.addTask { (index, await fetchReport(for: profile)) }
+            group.addTask { (index, await fetchReport(for: profile, trigger: trigger)) }
         }
         var reports = [ProfileReport?](repeating: nil, count: profiles.count)
         for await (index, report) in group {
@@ -107,7 +124,7 @@ public func fetchReports(for profiles: [Profile]) async -> [ProfileReport] {
     }
 }
 
-func fetchReport(for profile: Profile) async -> ProfileReport {
+func fetchReport(for profile: Profile, trigger: RefreshTrigger) async -> ProfileReport {
     let result: Result<ProfileUsage, UsageError>
     do {
         if let codexHome = profile.values["codex_home"], !codexHome.isEmpty {
@@ -118,6 +135,8 @@ func fetchReport(for profile: Profile) async -> ProfileReport {
             let token = try GrokAuth.resolve(cursorDir: cursorDir)
             let (usage, bankedResets) = try await GrokClient.fetch(token: token)
             result = .success(ProfileUsage(grok: usage, bankedResets: bankedResets))
+        } else if let token = profile.values["setup_token"], !token.isEmpty {
+            result = .success(try await SetupTokenProbes.usage(for: profile, token: token, trigger: trigger))
         } else {
             let creds = try CredentialStore.resolve(profile)
             let usage = try await UsageClient.fetch(token: creds.token)

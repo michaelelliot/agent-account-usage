@@ -2,6 +2,7 @@ import { styleText } from "node:util";
 import type { CodexReport, CodexUsage } from "./codex";
 import type { Credentials } from "./credentials";
 import type { GrokReport, GrokUsage } from "./grok";
+import { isLimited, isOverage, type UnifiedLimits } from "./setup-token";
 import type { ExtraUsage, Usage, UsageLimit } from "./usage";
 
 const BAR_WIDTH = 20;
@@ -132,7 +133,7 @@ function renderProfile(
   const labels = [...rows.map((r) => r.label), ...details.map(([l]) => l)];
   const labelWidth = Math.max(...labels.map((l) => l.length)) + 2;
 
-  if (!rows.length)
+  if (!rows.length && !details.length)
     lines.push(`  ${paint("dim", "no plan usage limits reported")}`);
   for (const row of rows) {
     const percent = paint(
@@ -296,6 +297,90 @@ export function formatGrokProfile(
     plan,
     grokRows(usage),
     resets ? [["Limit resets", resets]] : [],
+    now,
+  );
+}
+
+// A window whose reset time has passed has rolled over, so shows as unused. The weekly limit is the
+// one across all models: the headers don't carry the per-model ones, which often run out first.
+function setupTokenRows(limits: UnifiedLimits, now: number): Row[] {
+  const windows = [
+    ["Session (5h)", limits.five_hour],
+    ["Weekly (all models)", limits.seven_day],
+  ] as const;
+  return windows.flatMap(([label, window]) => {
+    if (window?.utilization == null) return [];
+    const resetsAt = window.reset != null ? window.reset * 1000 : null;
+    if (resetsAt != null && resetsAt <= now)
+      return [{ label, percent: 0, resetsAt: null }];
+    return [
+      {
+        label,
+        percent: window.utilization * 100,
+        resetsAt: resetsAt != null ? new Date(resetsAt).toISOString() : null,
+      },
+    ];
+  });
+}
+
+// "Limited (weekly)" when a limit binds, or a status this doesn't know, as received. Some
+// responses only carry the windows' own statuses.
+function setupTokenStatus(limits: UnifiedLimits): string | undefined {
+  const limitedWindow = isLimited(limits.five_hour?.status ?? null)
+    ? "five_hour"
+    : isLimited(limits.seven_day?.status ?? null)
+      ? "seven_day"
+      : undefined;
+  const status = limits.status ?? (limitedWindow ? "rejected" : undefined);
+  if (
+    !status ||
+    ["allowed", "allowed_warning", "active", "warning"].includes(status)
+  )
+    return undefined;
+  if (!isLimited(status)) return status;
+  const window = {
+    five_hour: "session",
+    seven_day: "weekly",
+    overage: "extra usage",
+  }[limits.representative_claim ?? limitedWindow ?? ""];
+  return window ? `Limited (${window})` : "Limited";
+}
+
+// The reset that comes with extra usage is the billing period's, weeks away, so it isn't shown.
+function overageText(limits: UnifiedLimits, paint: Paint): string {
+  let text = !isLimited(limits.overage_status)
+    ? "In use"
+    : limits.overage_disabled_reason === "out_of_credits"
+      ? "Used up"
+      : "Off";
+  if (limits.overage_utilization != null) {
+    const percent = limits.overage_utilization * 100;
+    text += ` ${paint(level(percent), `(${Math.round(percent)}%)`)}`;
+  }
+  if (isLimited(limits.overage_status)) {
+    const reason = limits.overage_disabled_reason?.replaceAll("_", " ");
+    text += paint("dim", reason ? `  disabled (${reason})` : "  disabled");
+  }
+  return text;
+}
+
+export function formatSetupTokenProfile(
+  name: string,
+  limits: UnifiedLimits,
+  { now = Date.now(), color }: FormatOptions = {},
+): string {
+  const paint = painter(color);
+  const details: [string, string][] = [];
+  if (isOverage(limits))
+    details.push(["Extra usage", overageText(limits, paint)]);
+  const status = setupTokenStatus(limits);
+  if (status) details.push(["Status", paint("red", status)]);
+  return renderProfile(
+    paint,
+    name,
+    undefined,
+    setupTokenRows(limits, now),
+    details,
     now,
   );
 }
