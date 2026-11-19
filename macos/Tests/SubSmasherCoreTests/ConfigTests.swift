@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct ConfigTests {
     @Test func readsSectionsAndTrimmedPairs() {
@@ -37,6 +37,22 @@ struct ConfigTests {
         #expect(Profile(id: "work", values: ["name": "Work"]).displayName == "Work")
         #expect(Profile(id: "work", values: ["name": ""]).displayName == "work")
         #expect(Profile(id: "work").displayName == "work")
+    }
+
+    @Test func defaultsToSubsmasherConfigUnlessOnlyTheAgentUsageOneExists() throws {
+        let home = FileManager.default.temporaryDirectory.appending(path: "subsmash-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: home) }
+        let url = home.appending(path: ".config/subsmasher/config")
+        let legacy = home.appending(path: ".config/agent-usage/config")
+        func create(_ file: URL) throws {
+            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data().write(to: file)
+        }
+        #expect(ConfigFile.defaultURL(home: home) == url)
+        try create(legacy)
+        #expect(ConfigFile.defaultURL(home: home) == legacy)
+        try create(url)
+        #expect(ConfigFile.defaultURL(home: home) == url)
     }
 
     @Test func expandsLeadingTildeOnly() {

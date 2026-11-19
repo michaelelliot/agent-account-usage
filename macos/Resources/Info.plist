@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Agent Usage</string>
+	<string>SubSmasher</string>
 	<key>CFBundleExecutable</key>
-	<string>AgentUsage</string>
+	<string>SubSmasher</string>
 	<key>CFBundleIdentifier</key>
-	<string>local.agent-account-usage.AgentUsage</string>
+	<string>local.subsmasher.SubSmasher</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Agent Usage</string>
+	<string>SubSmasher</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

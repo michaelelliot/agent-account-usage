@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct UsageTests {
     // Trimmed from a real /api/oauth/usage response.
@@ -124,8 +124,8 @@ struct UsageTests {
         #expect(slotOffset(heights: heights, from: 1, to: 1) == 0)
     }
 
-    // Hits the real API with your config: AGENT_USAGE_LIVE_TEST=1 swift test
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["AGENT_USAGE_LIVE_TEST"] != nil))
+    // Hits the real API with your config: SUBSMASHER_LIVE_TEST=1 swift test
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SUBSMASHER_LIVE_TEST"] != nil))
     func liveReportsForConfiguredProfiles() async throws {
         let profiles = try ConfigFile.load(from: ConfigFile.defaultURL)
         for report in await fetchReports(for: profiles, trigger: .manual) {

@@ -2,7 +2,7 @@
 import { Command, Option } from "commander";
 import { fetchCodexUsage, resolveCodexCredentials } from "./codex";
 import {
-  DEFAULT_CONFIG_PATH,
+  defaultConfigPath,
   expandHome,
   loadConfig,
   type Section,
@@ -57,19 +57,19 @@ async function report(section: Section, label: string): Promise<Report> {
 }
 
 const program = new Command()
-  .name("agent-usage")
+  .name("subsmash")
   .description(
     "Print Claude, ChatGPT (Codex) and Grok plan quota usage for accounts in an INI config file",
   )
   .option(
     "-c, --config <path>",
     "config file",
-    process.env.AGENT_USAGE_CONFIG ?? DEFAULT_CONFIG_PATH,
+    process.env.SUBSMASHER_CONFIG ?? defaultConfigPath(),
   )
   .addOption(
     new Option("-p, --profile <name>", "profile to show, repeatable")
       .argParser(collect)
-      .default([], '$AGENT_USAGE_PROFILE or "default"'),
+      .default([], '$SUBSMASHER_PROFILE or "default"'),
   )
   .option("-a, --all", "show every profile in the config file")
   .option("--json", "print raw API responses as JSON keyed by profile")
@@ -80,7 +80,7 @@ const program = new Command()
       ? [...config.keys()]
       : opts.profile.length
         ? opts.profile
-        : [process.env.AGENT_USAGE_PROFILE || "default"];
+        : [process.env.SUBSMASHER_PROFILE || "default"];
 
     const results: Result[] = await Promise.all(
       names.map(async (name) => {

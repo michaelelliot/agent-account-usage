@@ -18,7 +18,7 @@ async function withCursorDir(
   token: string | null,
   fn: (dir: string) => Promise<void>,
 ) {
-  const dir = await mkdtemp(join(tmpdir(), "agent-usage-test-"));
+  const dir = await mkdtemp(join(tmpdir(), "subsmash-test-"));
   try {
     await mkdir(join(dir, "User", "globalStorage"), { recursive: true });
     const db = new Database(join(dir, "User", "globalStorage", "state.vscdb"));

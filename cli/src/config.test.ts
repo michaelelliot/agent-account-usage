@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { homedir } from "node:os";
+import { mkdtemp, rm } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { expandHome, parseIni } from "./config";
+import { defaultConfigPath, expandHome, parseIni } from "./config";
 
 describe("parseIni", () => {
   test("reads sections and trimmed key/value pairs", () => {
@@ -46,6 +47,23 @@ describe("parseIni", () => {
 
   test("keeps empty sections", () => {
     expect(parseIni("[empty]\n").get("empty")).toEqual({});
+  });
+});
+
+describe("defaultConfigPath", () => {
+  test("is ~/.config/subsmasher/config unless only ~/.config/agent-usage/config exists", async () => {
+    const home = await mkdtemp(join(tmpdir(), "subsmash-test-"));
+    try {
+      const path = join(home, ".config", "subsmasher", "config");
+      const legacy = join(home, ".config", "agent-usage", "config");
+      expect(defaultConfigPath(home)).toBe(path);
+      await Bun.write(legacy, "");
+      expect(defaultConfigPath(home)).toBe(legacy);
+      await Bun.write(path, "");
+      expect(defaultConfigPath(home)).toBe(path);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
   });
 });
 

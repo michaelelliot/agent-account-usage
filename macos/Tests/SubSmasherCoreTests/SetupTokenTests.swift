@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct SetupTokenTests {
     static let now = Date(timeIntervalSince1970: 1_783_170_000)

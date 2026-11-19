@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct CodexTests {
     // Trimmed from a real /wham/usage response.
@@ -106,8 +106,8 @@ struct CodexTests {
     }
 
     @Test func reportsCodexHomeWithNoLogin() {
-        let error = #expect(throws: UsageError.self) { try CodexAuth.resolve(codexHome: "/nonexistent/agent-usage") }
-        #expect(error?.message.hasPrefix("no Codex login found in /nonexistent/agent-usage") == true)
+        let error = #expect(throws: UsageError.self) { try CodexAuth.resolve(codexHome: "/nonexistent/subsmash") }
+        #expect(error?.message.hasPrefix("no Codex login found in /nonexistent/subsmash") == true)
     }
 
     @Test func chatGPTErrorDetail() {
@@ -125,7 +125,7 @@ struct CodexTests {
     }
 
     static func authDir(_ contents: [String: Any]) throws -> URL {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "agent-usage-test-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appending(path: "subsmash-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try JSONSerialization.data(withJSONObject: contents).write(to: dir.appending(path: "auth.json"))
         return dir

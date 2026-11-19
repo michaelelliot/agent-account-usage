@@ -27,13 +27,22 @@ public struct Profile: Sendable, Equatable, Identifiable {
     }
 }
 
-/// The INI config shared with the CLI (`~/.config/agent-usage/config`).
+/// The INI config shared with the CLI (`~/.config/subsmasher/config`).
 public enum ConfigFile {
     public static var defaultURL: URL {
-        if let path = ProcessInfo.processInfo.environment["AGENT_USAGE_CONFIG"], !path.isEmpty {
+        if let path = ProcessInfo.processInfo.environment["SUBSMASHER_CONFIG"], !path.isEmpty {
             return URL(fileURLWithPath: expandHome(path))
         }
-        return URL(fileURLWithPath: NSHomeDirectory()).appending(path: ".config/agent-usage/config")
+        return defaultURL(home: URL(fileURLWithPath: NSHomeDirectory()))
+    }
+
+    /// `~/.config/subsmasher/config`, or `~/.config/agent-usage/config`, from when this was agent-account-usage, while
+    /// only that exists.
+    static func defaultURL(home: URL) -> URL {
+        let url = home.appending(path: ".config/subsmasher/config")
+        let legacy = home.appending(path: ".config/agent-usage/config")
+        let files = FileManager.default
+        return files.fileExists(atPath: url.path) || !files.fileExists(atPath: legacy.path) ? url : legacy
     }
 
     public static func load(from url: URL) throws -> [Profile] {

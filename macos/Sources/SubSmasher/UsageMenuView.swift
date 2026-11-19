@@ -1,4 +1,4 @@
-import AgentUsageCore
+import SubSmasherCore
 import AppKit
 import SwiftUI
 

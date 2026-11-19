@@ -15,7 +15,7 @@ async function withAuthFile(
   contents: unknown,
   fn: (dir: string) => Promise<void>,
 ) {
-  const dir = await mkdtemp(join(tmpdir(), "agent-usage-test-"));
+  const dir = await mkdtemp(join(tmpdir(), "subsmash-test-"));
   try {
     await writeFile(join(dir, "auth.json"), JSON.stringify(contents));
     await fn(dir);
@@ -66,7 +66,7 @@ describe("resolveCodexCredentials", () => {
 
   test("reports a codex home with no login", async () => {
     await expect(
-      resolveCodexCredentials("/nonexistent/agent-usage"),
-    ).rejects.toThrow("no Codex login found in /nonexistent/agent-usage");
+      resolveCodexCredentials("/nonexistent/subsmash"),
+    ).rejects.toThrow("no Codex login found in /nonexistent/subsmash");
   });
 });

@@ -1,4 +1,4 @@
-import AgentUsageCore
+import SubSmasherCore
 import AppKit
 import Observation
 import UniformTypeIdentifiers
@@ -11,13 +11,13 @@ final class UsageModel {
     private(set) var isRefreshing = false
     private(set) var lastUpdated: Date?
 
-    let configURL = ConfigFile.defaultURL
+    var configURL: URL { ConfigFile.defaultURL }
 
     private static let refreshInterval: Duration = .seconds(300)
     private static let staleAfter: TimeInterval = 60
     private static let orderKey = "profileOrder"
     private static let configTemplate = """
-        # agent-usage profiles: one [section] per account.
+        # SubSmasher profiles: one [section] per account.
         # Keys: name (optional label), and setup_token, claude_config_dir, oauth_token, codex_home or cursor_dir.
 
         [default]
@@ -26,7 +26,22 @@ final class UsageModel {
         """
 
     init() {
+        Self.adoptAgentUsageDefaults()
         Task { await refreshLoop() }
+    }
+
+    /// Takes over the saved order, setup-token check state and menu bar position the app had as Agent Usage, before it
+    /// was renamed. Only in the app itself: an unbundled `swift run` or a test runner keeps its defaults elsewhere.
+    private static func adoptAgentUsageDefaults() {
+        let agentUsage = "local.agent-account-usage.AgentUsage"
+        let defaults = UserDefaults.standard
+        guard Bundle.main.bundleIdentifier == "local.subsmasher.SubSmasher",
+            let saved = defaults.persistentDomain(forName: agentUsage)
+        else { return }
+        for (key, value) in saved where defaults.object(forKey: key) == nil {
+            defaults.set(value, forKey: key)
+        }
+        defaults.removePersistentDomain(forName: agentUsage)
     }
 
     /// Shows `reports` as just fetched, without reading the config or refreshing. For the README's screenshots.
@@ -129,7 +144,7 @@ final class UsageModel {
     /// A template image (drawn in the menu bar's own colour) until usage needs attention, then tinted.
     var menuBarImage: NSImage {
         let (name, color) = menuBarSymbol
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Agent usage") ?? NSImage()
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "SubSmasher") ?? NSImage()
         guard let color, let tinted = image.withSymbolConfiguration(.init(paletteColors: [color])) else {
             return image
         }

@@ -43,7 +43,7 @@ describe("resolveCredentials", () => {
     contents: unknown,
     fn: (dir: string) => Promise<void>,
   ) {
-    const dir = await mkdtemp(join(tmpdir(), "agent-usage-test-"));
+    const dir = await mkdtemp(join(tmpdir(), "subsmash-test-"));
     try {
       await writeCredentials(dir, contents);
       await fn(dir);
@@ -151,9 +151,7 @@ describe("resolveCredentials", () => {
 
   test("reports a config dir with no login", async () => {
     await expect(
-      resolveCredentials({ claude_config_dir: "/nonexistent/agent-usage" }),
-    ).rejects.toThrow(
-      "no Claude Code login found for /nonexistent/agent-usage",
-    );
+      resolveCredentials({ claude_config_dir: "/nonexistent/subsmash" }),
+    ).rejects.toThrow("no Claude Code login found for /nonexistent/subsmash");
   });
 });

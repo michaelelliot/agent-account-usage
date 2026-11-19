@@ -2,15 +2,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "AgentUsage",
+    name: "SubSmasher",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "AgentUsage", targets: ["AgentUsage"])
+        .executable(name: "SubSmasher", targets: ["SubSmasher"])
     ],
     targets: [
-        .target(name: "AgentUsageCore"),
-        .executableTarget(name: "AgentUsage", dependencies: ["AgentUsageCore"]),
-        .testTarget(name: "AgentUsageCoreTests", dependencies: ["AgentUsageCore"]),
-        .testTarget(name: "AgentUsageTests", dependencies: ["AgentUsage", "AgentUsageCore"]),
+        .target(name: "SubSmasherCore"),
+        .executableTarget(name: "SubSmasher", dependencies: ["SubSmasherCore"]),
+        .testTarget(name: "SubSmasherCoreTests", dependencies: ["SubSmasherCore"]),
+        .testTarget(name: "SubSmasherTests", dependencies: ["SubSmasher", "SubSmasherCore"]),
     ]
 )

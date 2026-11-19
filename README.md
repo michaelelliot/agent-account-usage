@@ -1,12 +1,12 @@
-# agent-account-usage
+# SubSmasher
 
 Shows plan quota usage for one or more Claude.ai, ChatGPT (Codex) and Grok accounts, either as a command-line tool or as a macOS menu bar app. Both read the same config file. For Claude that's the 5-hour session, weekly and per-model weekly limits plus extra usage; for ChatGPT it's the Codex limits, your credit balance and any limit resets you have available; for Grok it's Grok Bot's weekly usage and any banked resets.
 
-| Path             | What                                                |
-| ---------------- | --------------------------------------------------- |
-| `cli/`           | `agent-usage`, a Bun + commander CLI                |
-| `macos/`         | Agent Usage, a SwiftUI menu bar app (Swift package) |
-| `config.example` | Sample config for both                              |
+| Path             | What                                               |
+| ---------------- | -------------------------------------------------- |
+| `cli/`           | `subsmash`, a Bun + commander CLI                  |
+| `macos/`         | SubSmasher, a SwiftUI menu bar app (Swift package) |
+| `config.example` | Sample config for both                             |
 
 <p align="center">
   <img src="docs/menu.png" width="320" alt="The menu bar app's menu, showing usage for two Claude accounts, ChatGPT and Grok">
@@ -14,7 +14,7 @@ Shows plan quota usage for one or more Claude.ai, ChatGPT (Codex) and Grok accou
 
 ## Config
 
-The config is an INI file in the style of `~/.aws/credentials`, at `~/.config/agent-usage/config` by default (override with `AGENT_USAGE_CONFIG`, or `-c` for the CLI). See [`config.example`](config.example).
+The config is an INI file in the style of `~/.aws/credentials`, at `~/.config/subsmasher/config` by default (override with `SUBSMASHER_CONFIG`, or `-c` for the CLI). If that doesn't exist but `~/.config/agent-usage/config` does, from when this was called agent-account-usage, that's read instead. See [`config.example`](config.example).
 
 ```ini
 [default]
@@ -53,7 +53,7 @@ Claude usage comes from `GET https://api.anthropic.com/api/oauth/usage`, the sam
 
 ## CLI
 
-<img src="docs/cli.png" width="652" alt="The output of agent-usage -a for two Claude accounts, ChatGPT and Grok">
+<img src="docs/cli.png" width="652" alt="The output of subsmash -a for two Claude accounts, ChatGPT and Grok">
 
 Credits are what Codex spends once you hit a plan limit. Limit resets are one-off full resets you can use from the ChatGPT usage page; the soonest expiry is shown because they expire.
 
@@ -62,17 +62,17 @@ Credits are what Codex spends once you hit a plan limit. Limit resets are one-of
 ```sh
 cd cli
 bun install
-bun link   # puts `agent-usage` on your PATH
+bun link   # puts `subsmash` on your PATH
 ```
 
 ### Usage
 
 ```
-agent-usage                      # the [default] profile, or $AGENT_USAGE_PROFILE
-agent-usage -p work -p personal  # specific profiles
-agent-usage -a                   # every profile
-agent-usage --json               # raw API responses keyed by profile ({usage, reset_credits} for ChatGPT, {usage, banked_resets} for Grok, {model, status, headers} for a setup token)
-agent-usage list                 # profile names and credential source
+subsmash                      # the [default] profile, or $SUBSMASHER_PROFILE
+subsmash -p work -p personal  # specific profiles
+subsmash -a                   # every profile
+subsmash --json               # raw API responses keyed by profile ({usage, reset_credits} for ChatGPT, {usage, banked_resets} for Grok, {model, status, headers} for a setup token)
+subsmash list                 # profile names and credential source
 ```
 
 Output is coloured when stdout is a terminal. Set `NO_COLOR=1` to turn colours off, or `FORCE_COLOR=1` to keep them when piping.
@@ -98,20 +98,20 @@ Needs macOS 14 or later and the Swift 6 toolchain that comes with Xcode.
 
 ```sh
 cd macos
-./scripts/build-app.sh        # builds build/AgentUsage.app (ad-hoc signed)
-open build/AgentUsage.app
+./scripts/build-app.sh        # builds build/SubSmasher.app (ad-hoc signed)
+open build/SubSmasher.app
 ```
 
-To keep it, copy `build/AgentUsage.app` to `/Applications` and add it under System Settings > General > Login Items.
+To keep it, copy `build/SubSmasher.app` to `/Applications` and add it under System Settings > General > Login Items. If you had it as Agent Usage, delete `AgentUsage.app` (and its login item). SubSmasher takes over its saved order, setup-token check state and menu bar position the first time it opens.
 
 ### Development
 
 ```sh
 cd macos
-swift run AgentUsage                               # run without bundling
+swift run SubSmasher                               # run without bundling
 swift test
-AGENT_USAGE_LIVE_TEST=1 swift test --filter live   # also hits the real API with your config
+SUBSMASHER_LIVE_TEST=1 swift test --filter live    # also hits the real API with your config
 ./scripts/screenshots.sh                           # re-renders the README's screenshots in docs/ from sample accounts
 ```
 
-Open `macos/Package.swift` in Xcode to work on it there. `AgentUsageCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `AgentUsage` holds the SwiftUI app.
+Open `macos/Package.swift` in Xcode to work on it there. `SubSmasherCore` holds the config, credential and API code (Codex in `Codex.swift`, Grok in `Grok.swift`, setup tokens in `SetupToken.swift`), and `SubSmasher` holds the SwiftUI app.

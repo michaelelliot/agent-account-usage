@@ -1,15 +1,17 @@
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 export type Section = Record<string, string>;
 export type Config = Map<string, Section>;
 
-export const DEFAULT_CONFIG_PATH = join(
-  homedir(),
-  ".config",
-  "agent-usage",
-  "config",
-);
+// ~/.config/subsmasher/config, or ~/.config/agent-usage/config, from when this was agent-account-usage,
+// while only that exists.
+export function defaultConfigPath(home = homedir()): string {
+  const path = join(home, ".config", "subsmasher", "config");
+  const legacy = join(home, ".config", "agent-usage", "config");
+  return existsSync(path) || !existsSync(legacy) ? path : legacy;
+}
 
 export function parseIni(text: string): Config {
   const config: Config = new Map();

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @main
-struct AgentUsageApp: App {
+struct SubSmasherApp: App {
     @State private var model = UsageModel()
 
     init() {

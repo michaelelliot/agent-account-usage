@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct GrokTests {
     // Trimmed from a real GetSandUsageStatus response.
@@ -92,7 +92,7 @@ struct GrokTests {
 
     /// A Cursor data dir whose state.vscdb holds `token` unencrypted, as Cursor stores it without an OS keychain.
     static func cursorDir(token: String?) throws -> URL {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "agent-usage-test-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appending(path: "subsmash-test-\(UUID().uuidString)")
         let storage = dir.appending(path: "User/globalStorage")
         try FileManager.default.createDirectory(at: storage, withIntermediateDirectories: true)
         var sql = "CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);"

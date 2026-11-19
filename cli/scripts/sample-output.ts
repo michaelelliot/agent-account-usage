@@ -1,4 +1,4 @@
-// Prints `agent-usage -a` output for sample accounts, in colour, for the README's screenshot. Run
+// Prints `subsmash -a` output for sample accounts, in colour, for the README's screenshot. Run
 // macos/scripts/screenshots.sh rather than this directly.
 import {
   formatCodexProfile,

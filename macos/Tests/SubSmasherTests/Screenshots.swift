@@ -2,15 +2,15 @@ import AppKit
 import SwiftUI
 import Testing
 
-@testable import AgentUsage
-@testable import AgentUsageCore
+@testable import SubSmasher
+@testable import SubSmasherCore
 
-/// Renders the README's screenshots into $AGENT_USAGE_SCREENSHOTS: the menu for sample accounts, and the CLI's output
-/// for the same accounts from $AGENT_USAGE_CLI_OUTPUT. Run `scripts/screenshots.sh` rather than this directly.
+/// Renders the README's screenshots into $SUBSMASHER_SCREENSHOTS: the menu for sample accounts, and the CLI's output
+/// for the same accounts from $SUBSMASHER_CLI_OUTPUT. Run `scripts/screenshots.sh` rather than this directly.
 @MainActor
 struct Screenshots {
-    nonisolated static let directory = ProcessInfo.processInfo.environment["AGENT_USAGE_SCREENSHOTS"]
-    nonisolated static let cliOutput = ProcessInfo.processInfo.environment["AGENT_USAGE_CLI_OUTPUT"]
+    nonisolated static let directory = ProcessInfo.processInfo.environment["SUBSMASHER_SCREENSHOTS"]
+    nonisolated static let cliOutput = ProcessInfo.processInfo.environment["SUBSMASHER_CLI_OUTPUT"]
 
     @Test(.enabled(if: directory != nil))
     func menu() throws {
@@ -23,7 +23,7 @@ struct Screenshots {
     @Test(.enabled(if: directory != nil && cliOutput != nil))
     func cli() throws {
         let output = try String(contentsOfFile: Self.cliOutput!, encoding: .utf8)
-        let view = Terminal(command: "agent-usage -a", output: output)
+        let view = Terminal(command: "subsmash -a", output: output)
         try render(view, to: URL(fileURLWithPath: Self.directory!).appending(path: "cli.png"))
     }
 

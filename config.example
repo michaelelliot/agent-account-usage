@@ -1,4 +1,4 @@
-# agent-usage config: copy to ~/.config/agent-usage/config
+# SubSmasher config: copy to ~/.config/subsmasher/config
 # Each section is a profile. Optional `name` replaces the profile id in printed output.
 # Optional `claude_path` is where `claude` is, if it isn't on PATH or in a usual install dir (see README).
 # Optional `probe_model` is a comma-separated list of models a setup_token check tries in turn (see README).

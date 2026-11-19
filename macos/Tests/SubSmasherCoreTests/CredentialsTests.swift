@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-@testable import AgentUsageCore
+@testable import SubSmasherCore
 
 struct CredentialsTests {
     @Test func suffixesServiceWithSha256OfConfigDir() {
@@ -100,7 +100,7 @@ struct CredentialsTests {
     }
 
     @Test func runsClaudeCostWithTheConfigDirAndClaudesDirFirstOnPath() throws {
-        let dir = FileManager.default.temporaryDirectory.appending(path: "agent-usage-test-\(UUID().uuidString)")
+        let dir = FileManager.default.temporaryDirectory.appending(path: "subsmash-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
         // A fake claude that writes its arguments, CLAUDE_CONFIG_DIR and PATH next to itself.
@@ -129,16 +129,16 @@ struct CredentialsTests {
 
     @Test func reportsConfigDirWithNoLogin() {
         let error = #expect(throws: UsageError.self) {
-            try CredentialStore.resolve(Profile(id: "p", values: ["claude_config_dir": "/nonexistent/agent-usage"]))
+            try CredentialStore.resolve(Profile(id: "p", values: ["claude_config_dir": "/nonexistent/subsmash"]))
         }
-        #expect(error?.message.hasPrefix("no Claude Code login found for /nonexistent/agent-usage") == true)
+        #expect(error?.message.hasPrefix("no Claude Code login found for /nonexistent/subsmash") == true)
     }
 
     private func credentialsDir(
         accessToken: String, expiresAt: Date, subscriptionType: String? = nil, at existing: URL? = nil
     ) throws -> URL {
         let dir =
-            existing ?? FileManager.default.temporaryDirectory.appending(path: "agent-usage-test-\(UUID().uuidString)")
+            existing ?? FileManager.default.temporaryDirectory.appending(path: "subsmash-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var oauth: [String: Any] = ["accessToken": accessToken, "expiresAt": expiresAt.timeIntervalSince1970 * 1000]
         oauth["subscriptionType"] = subscriptionType

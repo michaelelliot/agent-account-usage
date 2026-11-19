@@ -1,10 +1,10 @@
 {
-  "name": "agent-account-usage",
+  "name": "subsmasher",
   "version": "0.1.0",
   "description": "Print Claude.ai plan quota usage for one or more accounts",
   "type": "module",
   "bin": {
-    "agent-usage": "src/cli.ts"
+    "subsmash": "src/cli.ts"
   },
   "scripts": {
     "start": "bun src/cli.ts",
