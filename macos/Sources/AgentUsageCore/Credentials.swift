@@ -16,9 +16,16 @@ private struct StoredCredentials: Decodable {
         let accessToken: String?
         let expiresAt: Double?
         let subscriptionType: String?
+        let rateLimitTier: String?
     }
 
     let claudeAiOauth: OAuth?
+}
+
+/// The plan to show. Anthropic renamed Max 20x to Ultra (and Max 5x to Max), but Claude Code still stores an Ultra
+/// login as `max` with the `default_claude_max_20x` rate limit tier.
+func planName(subscriptionType: String?, rateLimitTier: String?) -> String? {
+    subscriptionType == "max" && rateLimitTier?.contains("max_20x") == true ? "ultra" : subscriptionType
 }
 
 /// The `exp` claim of a JWT access token.
@@ -190,7 +197,7 @@ public enum CredentialStore {
         return Credentials(
             token: token,
             source: source,
-            subscriptionType: oauth.subscriptionType,
+            subscriptionType: planName(subscriptionType: oauth.subscriptionType, rateLimitTier: oauth.rateLimitTier),
             expiresAt: oauth.expiresAt.map { Date(timeIntervalSince1970: $0 / 1000) }
         )
     }

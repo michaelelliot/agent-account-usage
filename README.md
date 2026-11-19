@@ -39,7 +39,7 @@ cursor_dir = ~/Library/Application Support/Cursor
 
 Each section needs one of:
 
-- `claude_config_dir`: a Claude Code config directory (what you'd pass as `CLAUDE_CONFIG_DIR`). The OAuth token Claude Code stored for it is read from the macOS keychain, or from `<dir>/.credentials.json` on other platforms. Log in once with `CLAUDE_CONFIG_DIR=<dir> claude /login`.
+- `claude_config_dir`: a Claude Code config directory (what you'd pass as `CLAUDE_CONFIG_DIR`). The OAuth token Claude Code stored for it is read from the macOS keychain, or from `<dir>/.credentials.json` on other platforms. Log in once with `CLAUDE_CONFIG_DIR=<dir> claude /login`. Its plan is shown too, with Max 20x as Ultra, its name since Anthropic renamed it.
 - `setup_token`: a token printed by `claude setup-token`, run while that account is signed in to claude.ai in your browser. It lasts a year and nothing refreshes it, so it can't be signed out by Claude Code or by these tools. Its usage is read differently (see below). Takes precedence over `oauth_token` and `claude_config_dir`.
 - `oauth_token`: a literal Claude OAuth access token from a full login. Takes precedence over `claude_config_dir` if both are set. A `claude setup-token` token looks the same but goes in `setup_token`, as it can't read the usage endpoint.
 - `codex_home`: a Codex home directory (what you'd pass as `CODEX_HOME`, `~/.codex` by default). The ChatGPT desktop app and the `codex` CLI both keep your ChatGPT login in `<dir>/auth.json`, and that's read. Sign in with either one first. A Codex signed in with an API key has no plan limits to show.

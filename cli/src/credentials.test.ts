@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   claudeConfigDirFor,
   keychainServices,
+  planName,
   resolveCredentials,
 } from "./credentials";
 
@@ -86,6 +87,26 @@ describe("resolveCredentials", () => {
         });
       },
     );
+  });
+
+  test("shows a Max 20x login as Ultra", async () => {
+    await withCredentialsFile(
+      {
+        claudeAiOauth: {
+          accessToken: "tok",
+          expiresAt: Date.now() + 3_600_000,
+          subscriptionType: "max",
+          rateLimitTier: "default_claude_max_20x",
+        },
+      },
+      async (dir) => {
+        const creds = await resolveCredentials({ claude_config_dir: dir });
+        expect(creds.subscriptionType).toBe("ultra");
+      },
+    );
+    expect(planName("max", "default_claude_max_5x")).toBe("max");
+    expect(planName("pro", null)).toBe("pro");
+    expect(planName("team", "default_claude_max_20x")).toBe("team");
   });
 
   test("runs claude to refresh an expired token, then reads it again", async () => {

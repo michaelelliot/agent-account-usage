@@ -41,6 +41,14 @@ struct CredentialsTests {
         #expect(abs(creds.expiresAt!.timeIntervalSince(expiresAt)) < 0.01)
     }
 
+    @Test func showsAMax20xLoginAsUltra() throws {
+        let ultra = #"{"claudeAiOauth": {"accessToken": "t", "subscriptionType": "max", "rateLimitTier": "default_claude_max_20x"}}"#
+        #expect(try CredentialStore.parse(Data(ultra.utf8), source: "test").subscriptionType == "ultra")
+        #expect(planName(subscriptionType: "max", rateLimitTier: "default_claude_max_5x") == "max")
+        #expect(planName(subscriptionType: "pro", rateLimitTier: nil) == "pro")
+        #expect(planName(subscriptionType: "team", rateLimitTier: "default_claude_max_20x") == "team")
+    }
+
     @Test func runsClaudeToRefreshExpiredTokenThenRereadsIt() throws {
         let dir = try credentialsDir(accessToken: "old", expiresAt: Date.now.addingTimeInterval(-1))
         defer { try? FileManager.default.removeItem(at: dir) }

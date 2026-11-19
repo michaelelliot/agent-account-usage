@@ -17,7 +17,19 @@ interface StoredCredentials {
     accessToken?: string;
     expiresAt?: number;
     subscriptionType?: string | null;
+    rateLimitTier?: string | null;
   };
+}
+
+// The plan to show. Anthropic renamed Max 20x to Ultra (and Max 5x to Max), but Claude Code still
+// stores an Ultra login as "max" with the default_claude_max_20x rate limit tier.
+export function planName(
+  subscriptionType?: string | null,
+  rateLimitTier?: string | null,
+): string | undefined {
+  return subscriptionType === "max" && rateLimitTier?.includes("max_20x")
+    ? "ultra"
+    : (subscriptionType ?? undefined);
 }
 
 // The exp claim of a JWT access token, in ms.
@@ -88,7 +100,7 @@ function parseStored(raw: string, source: string): Credentials {
   return {
     token: oauth.accessToken,
     source,
-    subscriptionType: oauth.subscriptionType ?? undefined,
+    subscriptionType: planName(oauth.subscriptionType, oauth.rateLimitTier),
     expiresAt: oauth.expiresAt,
   };
 }
